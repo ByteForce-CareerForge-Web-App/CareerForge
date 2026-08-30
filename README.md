@@ -45,5 +45,4 @@ When running the API with XAMPP, make sure **Apache is running**.
 
 To test the opportunities endpoint, use:
 
-text
-http://localhost/opportunities.php
+ http://localhost/APICAREERFORGE/opportunities.php
