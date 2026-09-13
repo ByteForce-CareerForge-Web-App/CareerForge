@@ -2,16 +2,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
+  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 
 const EXPERIENCE_STORAGE_KEY = 'careerforge_experience';
 const PROFILE_STORAGE_KEY = 'careerforge_student_profile';
+const CONNECTIONS_KEY = 'careerforge_connections';
+const REQUESTS_KEY = 'careerforge_connection_requests';
 
 const EXPERIENCE_TYPES: Record<
   string,
@@ -92,7 +96,13 @@ export default function StudentProfile() {
   const [loadingExperience, setLoadingExperience] =
     useState(true);
 
-  const loadProfile = async () => {
+  const [connectionCount, setConnectionCount] =
+    useState(0);
+
+  const [pendingCount, setPendingCount] =
+    useState(0);
+
+  const loadData = async () => {
     try {
       const savedProfile =
         await AsyncStorage.getItem(
@@ -133,25 +143,11 @@ export default function StudentProfile() {
             DEFAULT_PROFILE.bio
         );
       }
-    } catch (error) {
-      console.log(
-        'Error loading profile:',
-        error
-      );
-    }
-  };
 
-  const loadExperience = async () => {
-    try {
       const savedExperience =
         await AsyncStorage.getItem(
           EXPERIENCE_STORAGE_KEY
         );
-
-      console.log(
-        'Saved Experience:',
-        savedExperience
-      );
 
       if (savedExperience) {
         const parsedExperience =
@@ -165,24 +161,65 @@ export default function StudentProfile() {
       } else {
         setExperience([]);
       }
+
+      const savedConnections =
+        await AsyncStorage.getItem(
+          CONNECTIONS_KEY
+        );
+
+      if (savedConnections) {
+        const parsedConnections =
+          JSON.parse(savedConnections);
+
+        if (Array.isArray(parsedConnections)) {
+          setConnectionCount(
+            parsedConnections.length
+          );
+        } else {
+          setConnectionCount(0);
+        }
+      } else {
+        setConnectionCount(0);
+      }
+
+      const savedRequests =
+        await AsyncStorage.getItem(
+          REQUESTS_KEY
+        );
+
+      if (savedRequests) {
+        const parsedRequests =
+          JSON.parse(savedRequests);
+
+        if (Array.isArray(parsedRequests)) {
+          setPendingCount(
+            parsedRequests.length
+          );
+        } else {
+          setPendingCount(0);
+        }
+      } else {
+        setPendingCount(0);
+      }
     } catch (error) {
       console.log(
-        'Error loading experience:',
+        'Error loading profile data:',
         error
       );
 
       setExperience([]);
+      setConnectionCount(0);
+      setPendingCount(0);
     } finally {
       setLoadingExperience(false);
     }
   };
 
-  // Load profile and experience whenever screen becomes active
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
 
-      const loadData = async () => {
+      const refreshData = async () => {
         try {
           const savedProfile =
             await AsyncStorage.getItem(
@@ -232,28 +269,70 @@ export default function StudentProfile() {
               EXPERIENCE_STORAGE_KEY
             );
 
-          if (savedExperience && isActive) {
-            const parsedExperience =
-              JSON.parse(savedExperience);
+          if (isActive) {
+            if (savedExperience) {
+              const parsedExperience =
+                JSON.parse(savedExperience);
 
-            if (Array.isArray(parsedExperience)) {
               setExperience(
-                parsedExperience
+                Array.isArray(parsedExperience)
+                  ? parsedExperience
+                  : []
               );
             } else {
               setExperience([]);
             }
-          } else if (isActive) {
-            setExperience([]);
+          }
+
+          const savedConnections =
+            await AsyncStorage.getItem(
+              CONNECTIONS_KEY
+            );
+
+          if (isActive) {
+            if (savedConnections) {
+              const parsedConnections =
+                JSON.parse(savedConnections);
+
+              setConnectionCount(
+                Array.isArray(parsedConnections)
+                  ? parsedConnections.length
+                  : 0
+              );
+            } else {
+              setConnectionCount(0);
+            }
+          }
+
+          const savedRequests =
+            await AsyncStorage.getItem(
+              REQUESTS_KEY
+            );
+
+          if (isActive) {
+            if (savedRequests) {
+              const parsedRequests =
+                JSON.parse(savedRequests);
+
+              setPendingCount(
+                Array.isArray(parsedRequests)
+                  ? parsedRequests.length
+                  : 0
+              );
+            } else {
+              setPendingCount(0);
+            }
           }
         } catch (error) {
           console.log(
-            'Error loading profile data:',
+            'Error refreshing profile:',
             error
           );
 
           if (isActive) {
             setExperience([]);
+            setConnectionCount(0);
+            setPendingCount(0);
           }
         } finally {
           if (isActive) {
@@ -262,7 +341,7 @@ export default function StudentProfile() {
         }
       };
 
-      loadData();
+      refreshData();
 
       return () => {
         isActive = false;
@@ -327,6 +406,7 @@ export default function StudentProfile() {
         setBio(DEFAULT_PROFILE.bio);
       }
 
+      Keyboard.dismiss();
       setIsEditing(false);
     } catch (error) {
       console.log(
@@ -341,12 +421,12 @@ export default function StudentProfile() {
   const handleSave = async () => {
     try {
       const updatedProfile: StudentProfileData = {
-        fullName,
-        email,
-        qualification,
-        yearOfStudy,
-        campus,
-        bio,
+        fullName: fullName.trim(),
+        email: email.trim(),
+        qualification: qualification.trim(),
+        yearOfStudy: yearOfStudy.trim(),
+        campus: campus.trim(),
+        bio: bio.trim(),
       };
 
       await AsyncStorage.setItem(
@@ -354,6 +434,16 @@ export default function StudentProfile() {
         JSON.stringify(updatedProfile)
       );
 
+      setFullName(updatedProfile.fullName);
+      setEmail(updatedProfile.email);
+      setQualification(
+        updatedProfile.qualification
+      );
+      setYearOfStudy(updatedProfile.yearOfStudy);
+      setCampus(updatedProfile.campus);
+      setBio(updatedProfile.bio);
+
+      Keyboard.dismiss();
       setIsEditing(false);
     } catch (error) {
       console.log(
@@ -363,513 +453,622 @@ export default function StudentProfile() {
     }
   };
 
+  const initials =
+    fullName.trim().length > 0
+      ? fullName
+          .trim()
+          .split(' ')
+          .map((part) => part.charAt(0))
+          .join('')
+          .slice(0, 2)
+          .toUpperCase()
+      : 'ST';
+
+  const completion =
+    experience.length > 0 ? 90 : 80;
+
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
+    <TouchableWithoutFeedback
+      onPress={Keyboard.dismiss}
     >
-      {/* Back */}
-      <Pressable
-        onPress={() => {
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            router.replace(
-              '/student/dashboard'
-            );
-          }
-        }}
-        style={styles.backButton}
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
-        <Text style={styles.backText}>
-          ← Back
-        </Text>
-      </Pressable>
+        {/* Back */}
+        <Pressable
+          onPress={() => {
+            Keyboard.dismiss();
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {fullName
-              .charAt(0)
-              .toUpperCase()}
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace(
+                '/student/dashboard'
+              );
+            }
+          }}
+          style={styles.backButton}
+        >
+          <Text style={styles.backText}>
+            ← Back
           </Text>
-        </View>
+        </Pressable>
 
-        <Text style={styles.title}>
-          My Profile
-        </Text>
-
-        <Text style={styles.subtitle}>
-          Manage your student profile and career
-          information.
-        </Text>
-      </View>
-
-      {/* Edit / Save Controls */}
-      <View style={styles.editControls}>
-        {!isEditing ? (
-          <Pressable
-            style={styles.editButton}
-            onPress={handleEdit}
-          >
-            <Text style={styles.editButtonText}>
-              ✏️ Edit
-            </Text>
-          </Pressable>
-        ) : (
-          <View style={styles.editModeButtons}>
-            <Pressable
-              style={styles.cancelButton}
-              onPress={handleCancel}
-            >
-              <Text style={styles.cancelButtonText}>
-                Cancel
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.saveChangesButton}
-              onPress={handleSave}
-            >
-              <Text style={styles.saveChangesText}>
-                Save Changes
-              </Text>
-            </Pressable>
-          </View>
-        )}
-      </View>
-
-      {/* Profile Completion */}
-      <View style={styles.completionCard}>
-        <View style={styles.completionHeader}>
-          <View>
-            <Text style={styles.completionTitle}>
-              Profile Completion
-            </Text>
-
-            <Text style={styles.completionSubtitle}>
-              Keep your career information up to date
+        {/* Professional Profile Header */}
+        <View style={styles.profileHeader}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {initials}
             </Text>
           </View>
 
-          <Text style={styles.completionPercentage}>
-            {experience.length > 0
-              ? '90%'
-              : '80%'}
-          </Text>
-        </View>
-
-        <View style={styles.progressBackground}>
-          <View
-            style={[
-              styles.progressFill,
-              {
-                width:
-                  experience.length > 0
-                    ? '90%'
-                    : '80%',
-              },
-            ]}
-          />
-        </View>
-      </View>
-
-      {/* Personal Information */}
-      <Text style={styles.sectionTitle}>
-        Personal Information
-      </Text>
-
-      <View style={styles.card}>
-        <Text style={styles.label}>
-          Full Name
-        </Text>
-
-        {isEditing ? (
-          <TextInput
-            style={styles.input}
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="Enter your full name"
-            placeholderTextColor="#94A3B8"
-          />
-        ) : (
-          <Text style={styles.detailValue}>
+          <Text style={styles.profileName}>
             {fullName}
           </Text>
-        )}
 
-        <Text style={styles.label}>
-          Email Address
-        </Text>
-
-        {isEditing ? (
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Enter your email"
-            placeholderTextColor="#94A3B8"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        ) : (
-          <Text style={styles.detailValue}>
-            {email}
-          </Text>
-        )}
-
-        <Text style={styles.label}>
-          Qualification
-        </Text>
-
-        {isEditing ? (
-          <TextInput
-            style={styles.input}
-            value={qualification}
-            onChangeText={setQualification}
-            placeholder="Enter your qualification"
-            placeholderTextColor="#94A3B8"
-          />
-        ) : (
-          <Text style={styles.detailValue}>
+          <Text style={styles.profileQualification}>
             {qualification}
           </Text>
-        )}
 
-        <Text style={styles.label}>
-          Year of Study
-        </Text>
-
-        {isEditing ? (
-          <TextInput
-            style={styles.input}
-            value={yearOfStudy}
-            onChangeText={setYearOfStudy}
-            placeholder="Enter your year of study"
-            placeholderTextColor="#94A3B8"
-          />
-        ) : (
-          <Text style={styles.detailValue}>
-            {yearOfStudy}
+          <Text style={styles.profileDetails}>
+            {yearOfStudy} • {campus}
           </Text>
-        )}
 
-        <Text style={styles.label}>
-          Campus
-        </Text>
+          <View style={styles.studentBadge}>
+            <Text style={styles.studentBadgeText}>
+              CareerForgeAI Student
+            </Text>
+          </View>
+        </View>
 
-        {isEditing ? (
-          <TextInput
-            style={styles.input}
-            value={campus}
-            onChangeText={setCampus}
-            placeholder="Enter your campus"
-            placeholderTextColor="#94A3B8"
-          />
-        ) : (
-          <Text style={styles.detailValue}>
-            {campus}
-          </Text>
-        )}
-      </View>
+        {/* Edit / Save Controls */}
+        <View style={styles.editControls}>
+          {!isEditing ? (
+            <Pressable
+              style={styles.editButton}
+              onPress={handleEdit}
+            >
+              <Text style={styles.editButtonText}>
+                Edit Profile
+              </Text>
+            </Pressable>
+          ) : (
+            <View style={styles.editModeButtons}>
+              <Pressable
+                style={styles.cancelButton}
+                onPress={handleCancel}
+              >
+                <Text style={styles.cancelButtonText}>
+                  Cancel
+                </Text>
+              </Pressable>
 
-      {/* About Me */}
-      <Text style={styles.sectionTitle}>
-        About Me
-      </Text>
+              <Pressable
+                style={styles.saveChangesButton}
+                onPress={handleSave}
+              >
+                <Text style={styles.saveChangesText}>
+                  Save Changes
+                </Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>
-          Professional Bio
-        </Text>
-
-        {isEditing ? (
-          <TextInput
-            style={styles.textArea}
-            value={bio}
-            onChangeText={setBio}
-            placeholder="Tell employers about yourself..."
-            placeholderTextColor="#94A3B8"
-            multiline
-            numberOfLines={5}
-            textAlignVertical="top"
-          />
-        ) : (
-          <Text style={styles.bioText}>
-            {bio}
-          </Text>
-        )}
-      </View>
-
-      {/* Experience */}
-      <Text style={styles.sectionTitle}>
-        Experience
-      </Text>
-
-      <View style={styles.experienceCard}>
-        {loadingExperience ? (
-          <Text style={styles.experienceLoading}>
-            Loading experience...
-          </Text>
-        ) : experience.length === 0 ? (
-          <>
-            <View style={styles.emptyExperience}>
-              <Text style={styles.emptyExperienceIcon}>
-                💼
+        {/* Profile Completion */}
+        <View style={styles.completionCard}>
+          <View style={styles.completionHeader}>
+            <View style={styles.completionTextContainer}>
+              <Text style={styles.completionTitle}>
+                Profile Completion
               </Text>
 
-              <Text style={styles.emptyExperienceTitle}>
-                No experience added yet
-              </Text>
-
-              <Text style={styles.emptyExperienceText}>
-                Add internships, projects,
-                volunteering, work experience,
-                certifications or activities.
+              <Text style={styles.completionSubtitle}>
+                Keep your career information up to date
               </Text>
             </View>
 
-            <Pressable
-              style={styles.experienceButton}
-              onPress={() =>
-                router.push(
-                  '/student/experience'
-                )
-              }
-            >
-              <Text style={styles.experienceButtonText}>
-                Add Experience
-              </Text>
-            </Pressable>
-          </>
-        ) : (
-          <>
-            <View style={styles.experienceHeader}>
-              <View>
-                <Text style={styles.experienceCardTitle}>
-                  Your Experience
+            <Text style={styles.completionPercentage}>
+              {completion}%
+            </Text>
+          </View>
+
+          <View style={styles.progressBackground}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${completion}%`,
+                },
+              ]}
+            />
+          </View>
+        </View>
+
+        {/* Personal Information */}
+        <Text style={styles.sectionTitle}>
+          Personal Information
+        </Text>
+
+        <View style={styles.card}>
+          <Text style={styles.label}>
+            Full Name
+          </Text>
+
+          {isEditing ? (
+            <TextInput
+              style={styles.input}
+              value={fullName}
+              onChangeText={setFullName}
+              placeholder="Enter your full name"
+              placeholderTextColor="#94A3B8"
+              returnKeyType="next"
+              blurOnSubmit
+            />
+          ) : (
+            <Text style={styles.detailValue}>
+              {fullName}
+            </Text>
+          )}
+
+          <Text style={styles.label}>
+            Email Address
+          </Text>
+
+          {isEditing ? (
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Enter your email"
+              placeholderTextColor="#94A3B8"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              returnKeyType="next"
+              blurOnSubmit
+            />
+          ) : (
+            <Text style={styles.detailValue}>
+              {email}
+            </Text>
+          )}
+
+          <Text style={styles.label}>
+            Qualification
+          </Text>
+
+          {isEditing ? (
+            <TextInput
+              style={styles.input}
+              value={qualification}
+              onChangeText={setQualification}
+              placeholder="Enter your qualification"
+              placeholderTextColor="#94A3B8"
+              returnKeyType="next"
+              blurOnSubmit
+            />
+          ) : (
+            <Text style={styles.detailValue}>
+              {qualification}
+            </Text>
+          )}
+
+          <Text style={styles.label}>
+            Year of Study
+          </Text>
+
+          {isEditing ? (
+            <TextInput
+              style={styles.input}
+              value={yearOfStudy}
+              onChangeText={setYearOfStudy}
+              placeholder="Enter your year of study"
+              placeholderTextColor="#94A3B8"
+              returnKeyType="next"
+              blurOnSubmit
+            />
+          ) : (
+            <Text style={styles.detailValue}>
+              {yearOfStudy}
+            </Text>
+          )}
+
+          <Text style={styles.label}>
+            Campus
+          </Text>
+
+          {isEditing ? (
+            <TextInput
+              style={styles.input}
+              value={campus}
+              onChangeText={setCampus}
+              placeholder="Enter your campus"
+              placeholderTextColor="#94A3B8"
+              returnKeyType="done"
+              onSubmitEditing={Keyboard.dismiss}
+            />
+          ) : (
+            <Text style={styles.detailValue}>
+              {campus}
+            </Text>
+          )}
+        </View>
+
+        {/* About Me */}
+        <Text style={styles.sectionTitle}>
+          About Me
+        </Text>
+
+        <View style={styles.card}>
+          <Text style={styles.label}>
+            Professional Bio
+          </Text>
+
+          {isEditing ? (
+            <TextInput
+              style={styles.textArea}
+              value={bio}
+              onChangeText={setBio}
+              placeholder="Tell employers about yourself..."
+              placeholderTextColor="#94A3B8"
+              multiline
+              numberOfLines={5}
+              textAlignVertical="top"
+            />
+          ) : (
+            <Text style={styles.bioText}>
+              {bio}
+            </Text>
+          )}
+        </View>
+
+        {/* Experience */}
+        <Text style={styles.sectionTitle}>
+          Experience
+        </Text>
+
+        <View style={styles.experienceCard}>
+          {loadingExperience ? (
+            <Text style={styles.experienceLoading}>
+              Loading experience...
+            </Text>
+          ) : experience.length === 0 ? (
+            <>
+              <View style={styles.emptyExperience}>
+                <Text
+                  style={styles.emptyExperienceIcon}
+                >
+                  💼
                 </Text>
 
-                <Text style={styles.experienceCardSubtitle}>
-                  {experience.length} experience type
-                  {experience.length !== 1
-                    ? 's'
-                    : ''}{' '}
-                  selected
+                <Text
+                  style={styles.emptyExperienceTitle}
+                >
+                  No experience added yet
+                </Text>
+
+                <Text
+                  style={styles.emptyExperienceText}
+                >
+                  Add internships, projects,
+                  volunteering, work experience,
+                  certifications or activities.
                 </Text>
               </View>
 
-              <Text style={styles.experienceCount}>
-                {experience.length}
-              </Text>
-            </View>
+              <Pressable
+                style={styles.experienceButton}
+                onPress={() =>
+                  router.push(
+                    '/student/experience'
+                  )
+                }
+              >
+                <Text
+                  style={styles.experienceButtonText}
+                >
+                  Add Experience
+                </Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <View style={styles.experienceHeader}>
+                <View>
+                  <Text
+                    style={styles.experienceCardTitle}
+                  >
+                    Your Experience
+                  </Text>
 
-            <View style={styles.experienceList}>
-              {experience.map(
-                (experienceId) => {
-                  const item =
-                    EXPERIENCE_TYPES[
-                      experienceId
-                    ];
+                  <Text
+                    style={styles.experienceCardSubtitle}
+                  >
+                    {experience.length} experience type
+                    {experience.length !== 1
+                      ? 's'
+                      : ''}{' '}
+                    selected
+                  </Text>
+                </View>
 
-                  if (!item) {
-                    return null;
-                  }
+                <Text style={styles.experienceCount}>
+                  {experience.length}
+                </Text>
+              </View>
 
-                  return (
-                    <View
-                      key={experienceId}
-                      style={
-                        styles.experienceItem
-                      }
-                    >
+              <View style={styles.experienceList}>
+                {experience.map(
+                  (experienceId) => {
+                    const item =
+                      EXPERIENCE_TYPES[
+                        experienceId
+                      ];
+
+                    if (!item) {
+                      return null;
+                    }
+
+                    return (
                       <View
+                        key={experienceId}
                         style={
-                          styles.experienceItemIcon
+                          styles.experienceItem
                         }
                       >
-                        <Text
+                        <View
                           style={
-                            styles.experienceIconText
+                            styles.experienceItemIcon
                           }
                         >
-                          {item.icon}
+                          <Text
+                            style={
+                              styles.experienceIconText
+                            }
+                          >
+                            {item.icon}
+                          </Text>
+                        </View>
+
+                        <Text
+                          style={
+                            styles.experienceItemText
+                          }
+                        >
+                          {item.title}
+                        </Text>
+
+                        <Text
+                          style={
+                            styles.experienceCheck
+                          }
+                        >
+                          ✓
                         </Text>
                       </View>
+                    );
+                  }
+                )}
+              </View>
 
-                      <Text
-                        style={
-                          styles.experienceItemText
-                        }
-                      >
-                        {item.title}
-                      </Text>
-
-                      <Text
-                        style={
-                          styles.experienceCheck
-                        }
-                      >
-                        ✓
-                      </Text>
-                    </View>
-                  );
+              <Pressable
+                style={styles.experienceButton}
+                onPress={() =>
+                  router.push(
+                    '/student/experience'
+                  )
                 }
-              )}
-            </View>
+              >
+                <Text
+                  style={styles.experienceButtonText}
+                >
+                  Update Experience
+                </Text>
+              </Pressable>
+            </>
+          )}
+        </View>
 
-            <Pressable
-              style={styles.experienceButton}
-              onPress={() =>
-                router.push(
-                  '/student/experience'
-                )
-              }
-            >
-              <Text style={styles.experienceButtonText}>
-                Update Experience
+        {/* Career Profile */}
+        <Text style={styles.sectionTitle}>
+          Career Profile
+        </Text>
+
+        {/* Career Goals */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoIcon}>
+              🎯
+            </Text>
+
+            <View style={styles.infoContent}>
+              <Text style={styles.infoTitle}>
+                Career Goals
               </Text>
-            </Pressable>
-          </>
-        )}
-      </View>
 
-      {/* Career Profile */}
-      <Text style={styles.sectionTitle}>
-        Career Profile
-      </Text>
-
-      {/* Career Goals */}
-      <View style={styles.infoCard}>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoIcon}>
-            🎯
-          </Text>
-
-          <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>
-              Career Goals
-            </Text>
-
-            <Text style={styles.infoText}>
-              Your selected career goals help
-              CareerForgeAI personalise your
-              roadmap.
-            </Text>
+              <Text style={styles.infoText}>
+                Your selected career goals help
+                CareerForgeAI personalise your
+                roadmap.
+              </Text>
+            </View>
           </View>
+
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() =>
+              router.push(
+                '/student/career-goals'
+              )
+            }
+          >
+            <Text style={styles.secondaryButtonText}>
+              Update Career Goals
+            </Text>
+          </Pressable>
         </View>
 
-        <Pressable
-          style={styles.secondaryButton}
-          onPress={() =>
-            router.push(
-              '/student/career-goals'
-            )
-          }
-        >
-          <Text style={styles.secondaryButtonText}>
-            Update Career Goals
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* Skills */}
-      <View style={styles.infoCard}>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoIcon}>
-            💡
-          </Text>
-
-          <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>
-              Skills
+        {/* Skills */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoIcon}>
+              💡
             </Text>
 
-            <Text style={styles.infoText}>
-              Add and manage the skills that you
-              want employers to see.
-            </Text>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoTitle}>
+                Skills
+              </Text>
+
+              <Text style={styles.infoText}>
+                Add and manage the skills that you
+                want employers to see.
+              </Text>
+            </View>
           </View>
+
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() =>
+              router.push('/student/skills')
+            }
+          >
+            <Text style={styles.secondaryButtonText}>
+              Manage Skills
+            </Text>
+          </Pressable>
         </View>
 
-        <Pressable
-          style={styles.secondaryButton}
-          onPress={() =>
-            router.push('/student/skills')
-          }
-        >
-          <Text style={styles.secondaryButtonText}>
-            Manage Skills
-          </Text>
-        </Pressable>
-      </View>
+        {/* Improve My CV */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoIcon}>
+              📄
+            </Text>
 
+            <View style={styles.infoContent}>
+              <Text style={styles.infoTitle}>
+                Improve My CV
+              </Text>
 
-      {/* Improve My CV */}
-      <View style={styles.infoCard}>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoIcon}>
-            📄
-          </Text>
+              <Text style={styles.infoText}>
+                Review and improve the different
+                sections of your CV to make your
+                profile more attractive to employers.
+              </Text>
+            </View>
+          </View>
 
-          <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() =>
+              router.push('/student/improve-cv')
+            }
+          >
+            <Text style={styles.secondaryButtonText}>
               Improve My CV
             </Text>
-
-            <Text style={styles.infoText}>
-              Review and improve the different sections
-              of your CV to make your profile more
-              attractive to employers.
-            </Text>
-          </View>
+          </Pressable>
         </View>
 
-        <Pressable
-          style={styles.secondaryButton}
-          onPress={() =>
-            router.push('/student/improve-cv')
-          }
-        >
-          <Text style={styles.secondaryButtonText}>
-            Improve My CV
+        {/* My Network */}
+        <Text style={styles.sectionTitle}>
+          My Network
+        </Text>
+
+        <View style={styles.networkCard}>
+          <View style={styles.networkHeader}>
+            <View style={styles.networkIcon}>
+              <Text style={styles.networkIconText}>
+                👥
+              </Text>
+            </View>
+
+            <View style={styles.networkContent}>
+              <Text style={styles.networkTitle}>
+                Connections
+              </Text>
+
+              <Text style={styles.networkText}>
+                Build your professional network with
+                students, alumni and other CareerForgeAI
+                members.
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.networkStats}>
+            <View style={styles.networkStat}>
+              <Text style={styles.networkStatNumber}>
+                {connectionCount}
+              </Text>
+
+              <Text style={styles.networkStatLabel}>
+                Connections
+              </Text>
+            </View>
+
+            <View style={styles.networkDivider} />
+
+            <View style={styles.networkStat}>
+              <Text style={styles.networkStatNumber}>
+                {pendingCount}
+              </Text>
+
+              <Text style={styles.networkStatLabel}>
+                Pending
+              </Text>
+            </View>
+          </View>
+
+          <Pressable
+            style={styles.networkButton}
+            onPress={() =>
+              router.push('/student/connections')
+            }
+          >
+            <Text style={styles.networkButtonText}>
+              View My Network
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Security Notice */}
+        <View style={styles.securityCard}>
+          <Text style={styles.securityTitle}>
+            🔒 Profile Security
           </Text>
-        </Pressable>
-      </View>
 
-      {/* Security Notice */}
-      <View style={styles.securityCard}>
-        <Text style={styles.securityTitle}>
-          🔒 Profile Security
+          <Text style={styles.securityText}>
+            Your profile information is locked by
+            default. Press Edit to make changes.
+            Your changes are only applied when you
+            select Save Changes.
+          </Text>
+        </View>
+
+        {/* Tip */}
+        <View style={styles.tipCard}>
+          <Text style={styles.tipTitle}>
+            💡 Profile Tip
+          </Text>
+
+          <Text style={styles.tipText}>
+            A complete profile helps you stand out
+            to employers and improves the accuracy
+            of your CareerForgeAI recommendations.
+          </Text>
+        </View>
+
+        <Text style={styles.footer}>
+          CareerForgeAI • Empowering Your Career
         </Text>
-
-        <Text style={styles.securityText}>
-          Your profile information is locked by
-          default. Press Edit to make changes.
-          Your changes are only applied when you
-          select Save Changes.
-        </Text>
-      </View>
-
-      {/* Tip */}
-      <View style={styles.tipCard}>
-        <Text style={styles.tipTitle}>
-          💡 Profile Tip
-        </Text>
-
-        <Text style={styles.tipText}>
-          A complete profile helps you stand out
-          to employers and improves the accuracy
-          of your CareerForgeAI recommendations.
-        </Text>
-      </View>
-
-      <Text style={styles.footer}>
-        CareerForgeAI • Empowering Your Career
-      </Text>
-    </ScrollView>
+      </ScrollView>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -894,15 +1093,20 @@ const styles = StyleSheet.create({
     color: '#0B1F3A',
   },
 
-  header: {
+  profileHeader: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 24,
     alignItems: 'center',
-    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 18,
   },
 
   avatar: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: '#0B1F3A',
     alignItems: 'center',
     justifyContent: 'center',
@@ -910,23 +1114,45 @@ const styles = StyleSheet.create({
   },
 
   avatarText: {
-    fontSize: 34,
+    fontSize: 30,
     fontWeight: '800',
     color: '#FFFFFF',
   },
 
-  title: {
-    fontSize: 28,
+  profileName: {
+    fontSize: 24,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: 6,
+    textAlign: 'center',
+    marginBottom: 5,
   },
 
-  subtitle: {
-    fontSize: 14,
+  profileQualification: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#334155',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+
+  profileDetails: {
+    fontSize: 13,
     color: '#64748B',
     textAlign: 'center',
-    lineHeight: 21,
+    marginBottom: 14,
+  },
+
+  studentBadge: {
+    backgroundColor: '#E8F0F8',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+
+  studentBadgeText: {
+    color: '#1E4B7A',
+    fontSize: 11,
+    fontWeight: '700',
   },
 
   editControls: {
@@ -948,7 +1174,7 @@ const styles = StyleSheet.create({
 
   editModeButtons: {
     flexDirection: 'row',
-    gap: 10,
+    alignItems: 'center',
   },
 
   cancelButton: {
@@ -959,6 +1185,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
+    marginRight: 10,
   },
 
   cancelButtonText: {
@@ -997,6 +1224,11 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
+  completionTextContainer: {
+    flex: 1,
+    marginRight: 10,
+  },
+
   completionTitle: {
     fontSize: 16,
     fontWeight: '800',
@@ -1012,7 +1244,7 @@ const styles = StyleSheet.create({
   completionPercentage: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#0B1F3A',
+    color: '#15803D',
   },
 
   progressBackground: {
@@ -1024,7 +1256,7 @@ const styles = StyleSheet.create({
 
   progressFill: {
     height: '100%',
-    backgroundColor: '#0B1F3A',
+    backgroundColor: '#15803D',
     borderRadius: 10,
   },
 
@@ -1260,6 +1492,99 @@ const styles = StyleSheet.create({
   },
 
   secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0B1F3A',
+  },
+
+  networkCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 24,
+  },
+
+  networkHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 18,
+  },
+
+  networkIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 13,
+  },
+
+  networkIconText: {
+    fontSize: 23,
+  },
+
+  networkContent: {
+    flex: 1,
+  },
+
+  networkTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 5,
+  },
+
+  networkText: {
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 19,
+  },
+
+  networkStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginBottom: 14,
+  },
+
+  networkStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+
+  networkStatNumber: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0B1F3A',
+    marginBottom: 3,
+  },
+
+  networkStatLabel: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+
+  networkDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: '#CBD5E1',
+  },
+
+  networkButton: {
+    borderWidth: 1,
+    borderColor: '#0B1F3A',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+
+  networkButtonText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#0B1F3A',

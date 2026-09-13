@@ -13,9 +13,11 @@ import {
 } from 'react-native';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as DocumentPicker from 'expo-document-picker';
 import { router, useFocusEffect } from 'expo-router';
 
 const ALUMNI_PROFILE_KEY = 'careerforge_alumni_profile';
+const ALUMNI_DOCUMENTS_KEY = 'careerforge_alumni_documents';
 
 type AlumniProfileData = {
   fullName: string;
@@ -27,6 +29,16 @@ type AlumniProfileData = {
   currentPosition: string;
   skills: string;
   experience: string;
+};
+
+type AlumniDocument = {
+  id: string;
+  type: 'cv' | 'certificate';
+  name: string;
+  uri: string;
+  mimeType?: string;
+  size?: number;
+  uploadedAt: string;
 };
 
 const DEFAULT_PROFILE: AlumniProfileData = {
@@ -53,6 +65,12 @@ export default function EditAlumniProfile() {
   const [experience, setExperience] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const [cvDocument, setCvDocument] =
+    useState<AlumniDocument | null>(null);
+
+  const [certificateDocument, setCertificateDocument] =
+    useState<AlumniDocument | null>(null);
+
   const loadProfile = useCallback(async () => {
     try {
       const savedProfile = await AsyncStorage.getItem(
@@ -64,15 +82,19 @@ export default function EditAlumniProfile() {
 
         setFullName(profile.fullName ?? DEFAULT_PROFILE.fullName);
         setEmail(profile.email ?? DEFAULT_PROFILE.email);
+
         setQualification(
           profile.qualification ?? DEFAULT_PROFILE.qualification
         );
+
         setGraduationYear(
           profile.graduationYear ?? DEFAULT_PROFILE.graduationYear
         );
+
         setInstitution(
           profile.institution ?? DEFAULT_PROFILE.institution
         );
+
         setCurrentCompany(profile.currentCompany ?? '');
         setCurrentPosition(profile.currentPosition ?? '');
         setSkills(profile.skills ?? DEFAULT_PROFILE.skills);
@@ -88,6 +110,29 @@ export default function EditAlumniProfile() {
         setSkills(DEFAULT_PROFILE.skills);
         setExperience(DEFAULT_PROFILE.experience);
       }
+
+      const savedDocuments = await AsyncStorage.getItem(
+        ALUMNI_DOCUMENTS_KEY
+      );
+
+      if (savedDocuments) {
+        const documents: AlumniDocument[] =
+          JSON.parse(savedDocuments);
+
+        const cv = documents.find(
+          (document) => document.type === 'cv'
+        );
+
+        const certificate = documents.find(
+          (document) => document.type === 'certificate'
+        );
+
+        setCvDocument(cv ?? null);
+        setCertificateDocument(certificate ?? null);
+      } else {
+        setCvDocument(null);
+        setCertificateDocument(null);
+      }
     } catch (error) {
       console.log('Error loading alumni profile:', error);
     }
@@ -98,6 +143,184 @@ export default function EditAlumniProfile() {
       loadProfile();
     }, [loadProfile])
   );
+
+  async function saveDocuments(
+    updatedDocuments: AlumniDocument[]
+  ) {
+    try {
+      await AsyncStorage.setItem(
+        ALUMNI_DOCUMENTS_KEY,
+        JSON.stringify(updatedDocuments)
+      );
+    } catch (error) {
+      console.log('Error saving documents:', error);
+
+      Alert.alert(
+        'Upload Error',
+        'The document could not be saved.'
+      );
+    }
+  }
+
+  async function handleDocumentUpload(
+    type: 'cv' | 'certificate'
+  ) {
+    try {
+      const result =
+        await DocumentPicker.getDocumentAsync({
+          type: [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'image/*',
+          ],
+          copyToCacheDirectory: true,
+          multiple: false,
+        });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const selectedFile = result.assets?.[0];
+
+      if (!selectedFile) {
+        Alert.alert(
+          'Upload Failed',
+          'No document was selected.'
+        );
+        return;
+      }
+
+      const newDocument: AlumniDocument = {
+        id: `${type}-${Date.now()}`,
+        type,
+        name: selectedFile.name,
+        uri: selectedFile.uri,
+        mimeType: selectedFile.mimeType,
+        size: selectedFile.size,
+        uploadedAt: new Date().toISOString(),
+      };
+
+      const existingDocumentsRaw =
+        await AsyncStorage.getItem(ALUMNI_DOCUMENTS_KEY);
+
+      let existingDocuments: AlumniDocument[] = [];
+
+      if (existingDocumentsRaw) {
+        existingDocuments = JSON.parse(existingDocumentsRaw);
+      }
+
+      const updatedDocuments = [
+        ...existingDocuments.filter(
+          (document) => document.type !== type
+        ),
+        newDocument,
+      ];
+
+      await saveDocuments(updatedDocuments);
+
+      if (type === 'cv') {
+        setCvDocument(newDocument);
+      } else {
+        setCertificateDocument(newDocument);
+      }
+
+      Alert.alert(
+        'Document Uploaded',
+        `${selectedFile.name} has been added to your profile.`
+      );
+    } catch (error) {
+      console.log('Document picker error:', error);
+
+      Alert.alert(
+        'Upload Failed',
+        'Something went wrong while selecting the document.'
+      );
+    }
+  }
+
+  async function handleRemoveDocument(
+    type: 'cv' | 'certificate'
+  ) {
+    const document =
+      type === 'cv'
+        ? cvDocument
+        : certificateDocument;
+
+    if (!document) {
+      return;
+    }
+
+    Alert.alert(
+      'Remove Document',
+      `Are you sure you want to remove "${document.name}"?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const savedDocumentsRaw =
+                await AsyncStorage.getItem(
+                  ALUMNI_DOCUMENTS_KEY
+                );
+
+              let savedDocuments: AlumniDocument[] = [];
+
+              if (savedDocumentsRaw) {
+                savedDocuments =
+                  JSON.parse(savedDocumentsRaw);
+              }
+
+              const updatedDocuments =
+                savedDocuments.filter(
+                  (item) => item.type !== type
+                );
+
+              await saveDocuments(updatedDocuments);
+
+              if (type === 'cv') {
+                setCvDocument(null);
+              } else {
+                setCertificateDocument(null);
+              }
+            } catch (error) {
+              console.log(
+                'Error removing document:',
+                error
+              );
+
+              Alert.alert(
+                'Error',
+                'The document could not be removed.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  function formatFileSize(size?: number) {
+    if (!size) {
+      return '';
+    }
+
+    if (size < 1024) {
+      return `${size} B`;
+    }
+
+    if (size < 1024 * 1024) {
+      return `${(size / 1024).toFixed(1)} KB`;
+    }
+
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  }
 
   async function handleSave() {
     if (!fullName.trim()) {
@@ -156,11 +379,15 @@ export default function EditAlumniProfile() {
         JSON.stringify(profile)
       );
 
-      const checkSavedProfile = await AsyncStorage.getItem(
-      ALUMNI_PROFILE_KEY
-    );
+      const checkSavedProfile =
+        await AsyncStorage.getItem(
+          ALUMNI_PROFILE_KEY
+        );
 
-    console.log('PROFILE SAVED:', checkSavedProfile);
+      console.log(
+        'PROFILE SAVED:',
+        checkSavedProfile
+      );
 
       Alert.alert(
         'Profile Updated',
@@ -178,7 +405,10 @@ export default function EditAlumniProfile() {
         }
       );
     } catch (error) {
-      console.log('Error saving alumni profile:', error);
+      console.log(
+        'Error saving alumni profile:',
+        error
+      );
 
       Alert.alert(
         'Save Failed',
@@ -192,14 +422,17 @@ export default function EditAlumniProfile() {
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={
+        Platform.OS === 'ios'
+          ? 'padding'
+          : undefined
+      }
     >
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-
         {/* Header */}
         <View style={styles.header}>
           <Pressable
@@ -392,27 +625,37 @@ export default function EditAlumniProfile() {
             Documents
           </Text>
 
+          {/* CV */}
           <Pressable
             style={styles.documentButton}
-            onPress={() => {
-              Alert.alert(
-                'CV Upload',
-                'CV upload will be connected when we add document storage.'
-              );
-            }}
+            onPress={() =>
+              handleDocumentUpload('cv')
+            }
           >
-            <Text style={styles.documentIcon}>
-              +
-            </Text>
+            <View style={styles.documentIcon}>
+              <Text style={styles.documentIconText}>
+                +
+              </Text>
+            </View>
 
             <View style={styles.documentTextContainer}>
               <Text style={styles.documentTitle}>
-                Upload CV / Resume
+                {cvDocument
+                  ? 'Replace CV / Resume'
+                  : 'Upload CV / Resume'}
               </Text>
 
               <Text style={styles.documentDescription}>
-                Add your latest CV to your profile.
+                {cvDocument
+                  ? cvDocument.name
+                  : 'Add your latest CV to your profile.'}
               </Text>
+
+              {cvDocument?.size ? (
+                <Text style={styles.fileSize}>
+                  {formatFileSize(cvDocument.size)}
+                </Text>
+              ) : null}
             </View>
 
             <Text style={styles.arrow}>
@@ -420,33 +663,75 @@ export default function EditAlumniProfile() {
             </Text>
           </Pressable>
 
+          {cvDocument ? (
+            <Pressable
+              style={styles.removeButton}
+              onPress={() =>
+                handleRemoveDocument('cv')
+              }
+            >
+              <Text style={styles.removeButtonText}>
+                Remove CV
+              </Text>
+            </Pressable>
+          ) : null}
+
+          {/* Degree Certificate */}
           <Pressable
             style={styles.documentButton}
-            onPress={() => {
-              Alert.alert(
-                'Certificate Upload',
-                'Degree certificate upload will be connected when document verification is added.'
-              );
-            }}
+            onPress={() =>
+              handleDocumentUpload('certificate')
+            }
           >
-            <Text style={styles.documentIcon}>
-              +
-            </Text>
+            <View style={styles.documentIcon}>
+              <Text style={styles.documentIconText}>
+                +
+              </Text>
+            </View>
 
             <View style={styles.documentTextContainer}>
               <Text style={styles.documentTitle}>
-                Upload Degree Certificate
+                {certificateDocument
+                  ? 'Replace Degree Certificate'
+                  : 'Upload Degree Certificate'}
               </Text>
 
               <Text style={styles.documentDescription}>
-                Add your qualification certificate.
+                {certificateDocument
+                  ? certificateDocument.name
+                  : 'Add your qualification certificate.'}
               </Text>
+
+              {certificateDocument?.size ? (
+                <Text style={styles.fileSize}>
+                  {formatFileSize(
+                    certificateDocument.size
+                  )}
+                </Text>
+              ) : null}
             </View>
 
             <Text style={styles.arrow}>
               ›
             </Text>
           </Pressable>
+
+          {certificateDocument ? (
+            <Pressable
+              style={styles.removeButton}
+              onPress={() =>
+                handleRemoveDocument('certificate')
+              }
+            >
+              <Text style={styles.removeButtonText}>
+                Remove Certificate
+              </Text>
+            </Pressable>
+          ) : null}
+
+          <Text style={styles.documentNote}>
+            Supported formats: PDF, Word documents and images.
+          </Text>
         </View>
 
         {/* Save Button */}
@@ -475,7 +760,6 @@ export default function EditAlumniProfile() {
         </Pressable>
 
         <View style={styles.bottomSpace} />
-
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -513,7 +797,7 @@ const styles = StyleSheet.create({
 
   backText: {
     fontSize: 38,
-    color: '#4F46E5',
+    color: '#0B1F3A',
     lineHeight: 42,
   },
 
@@ -615,12 +899,16 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#EEF2FF',
-    color: '#4F46E5',
+    backgroundColor: '#E8F0F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  documentIconText: {
+    color: '#0B1F3A',
     fontSize: 25,
     fontWeight: '600',
-    textAlign: 'center',
-    lineHeight: 36,
+    lineHeight: 28,
   },
 
   documentTextContainer: {
@@ -640,13 +928,39 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
+  fileSize: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 3,
+  },
+
   arrow: {
     fontSize: 28,
     color: '#9CA3AF',
   },
 
+  removeButton: {
+    alignSelf: 'flex-end',
+    marginTop: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+
+  removeButtonText: {
+    color: '#DC2626',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  documentNote: {
+    color: '#64748B',
+    fontSize: 11,
+    lineHeight: 17,
+    marginTop: 12,
+  },
+
   saveButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#0B1F3A',
     marginHorizontal: 16,
     marginTop: 22,
     height: 55,
@@ -675,7 +989,7 @@ const styles = StyleSheet.create({
   },
 
   cancelButtonText: {
-    color: '#4F46E5',
+    color: '#0B1F3A',
     fontSize: 15,
     fontWeight: '700',
   },

@@ -1,7 +1,4 @@
-import React, {
-  useCallback,
-  useState,
-} from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -15,10 +12,14 @@ import {
   useFocusEffect,
   useLocalSearchParams,
 } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const APPLICATION_STATUS_KEY =
   'careerforge_business_application_statuses';
+
+const CONNECTIONS_KEY =
+  'careerforge_business_connections';
 
 type ApplicationStatus =
   | 'Under Review'
@@ -39,7 +40,16 @@ type CandidateData = {
   experienceTitle: string;
   experienceDuration: string;
   experienceDescription: string;
-  aiMatch: string;
+  aiMatch: number;
+};
+
+type Connection = {
+  id: string;
+  name: string;
+  role: string;
+  initials: string;
+  email: string;
+  connectedAt: string;
 };
 
 const candidates: CandidateData[] = [
@@ -47,13 +57,11 @@ const candidates: CandidateData[] = [
     id: '1',
     name: 'Thabo Mokoena',
     qualification: 'BSc Data Science',
-    applied: '2 days ago',
+    applied: 'Data Analytics Intern',
     email: 'thabo.mokoena@example.com',
-    education:
-      'Bachelor of Science in Data Science',
-    institution:
-      'Richfield Graduate Institute of Technology',
-    graduation: 'Expected Graduation: 2027',
+    education: 'Bachelor of Science in Data Science',
+    institution: 'Richfield Graduate Institute of Technology',
+    graduation: 'Expected 2027',
     skills: [
       'Python',
       'SQL',
@@ -63,23 +71,20 @@ const candidates: CandidateData[] = [
       'Excel',
     ],
     experienceTitle: 'Data Analytics Intern',
-    experienceDuration: '6 months experience',
+    experienceDuration: '6 months',
     experienceDescription:
-      'Assisted with data analysis, dashboard development and reporting using Python, SQL and Power BI.',
-    aiMatch: '92%',
+      'Worked with data analysis, reporting and dashboard development.',
+    aiMatch: 92,
   },
-
   {
     id: '2',
     name: 'Aisha Naidoo',
     qualification: 'BSc Computer Science',
-    applied: '3 days ago',
+    applied: 'Software Development Intern',
     email: 'aisha.naidoo@example.com',
-    education:
-      'Bachelor of Science in Computer Science',
-    institution:
-      'Richfield Graduate Institute of Technology',
-    graduation: 'Expected Graduation: 2027',
+    education: 'Bachelor of Science in Computer Science',
+    institution: 'Richfield Graduate Institute of Technology',
+    graduation: 'Expected 2027',
     skills: [
       'Python',
       'Java',
@@ -89,24 +94,20 @@ const candidates: CandidateData[] = [
       'Problem Solving',
     ],
     experienceTitle: 'Software Development Intern',
-    experienceDuration: '4 months experience',
+    experienceDuration: '4 months',
     experienceDescription:
-      'Worked on web applications and assisted with software development projects using Java, React and SQL.',
-    aiMatch: '89%',
+      'Assisted with software development and frontend application projects.',
+    aiMatch: 89,
   },
-
   {
     id: '3',
     name: 'Liam Smith',
-    qualification:
-      'BSc Information Technology',
-    applied: '4 days ago',
+    qualification: 'BSc IT',
+    applied: 'Junior Web Developer',
     email: 'liam.smith@example.com',
-    education:
-      'Bachelor of Science in Information Technology',
-    institution:
-      'Richfield Graduate Institute of Technology',
-    graduation: 'Expected Graduation: 2027',
+    education: 'Bachelor of Science in Information Technology',
+    institution: 'Richfield Graduate Institute of Technology',
+    graduation: 'Expected 2027',
     skills: [
       'React',
       'JavaScript',
@@ -116,23 +117,19 @@ const candidates: CandidateData[] = [
       'Git',
     ],
     experienceTitle: 'Junior Web Developer',
-    experienceDuration: '8 months experience',
+    experienceDuration: '8 months',
     experienceDescription:
-      'Developed responsive web interfaces and assisted with frontend development using React and JavaScript.',
-    aiMatch: '94%',
+      'Developed responsive web interfaces and assisted with frontend development.',
+    aiMatch: 94,
   },
-
   {
     id: '4',
     name: 'Zanele Dlamini',
-    qualification:
-      'Diploma in Software Development',
-    applied: '5 days ago',
+    qualification: 'Diploma Software Development',
+    applied: 'Software Development Intern',
     email: 'zanele.dlamini@example.com',
-    education:
-      'Diploma in Software Development',
-    institution:
-      'Richfield Graduate Institute of Technology',
+    education: 'Diploma in Software Development',
+    institution: 'Richfield Graduate Institute of Technology',
     graduation: 'Completed 2026',
     skills: [
       'Java',
@@ -143,24 +140,20 @@ const candidates: CandidateData[] = [
       'Software Development',
     ],
     experienceTitle: 'Software Development Intern',
-    experienceDuration: '5 months experience',
+    experienceDuration: '5 months',
     experienceDescription:
-      'Supported software development projects and assisted with database and application development tasks.',
-    aiMatch: '84%',
+      'Supported development tasks and worked on software development projects.',
+    aiMatch: 84,
   },
-
   {
     id: '5',
     name: 'Ethan Williams',
-    qualification:
-      'BSc Information Technology',
-    applied: '1 week ago',
+    qualification: 'BSc IT',
+    applied: 'IT Support Assistant',
     email: 'ethan.williams@example.com',
-    education:
-      'Bachelor of Science in Information Technology',
-    institution:
-      'Richfield Graduate Institute of Technology',
-    graduation: 'Expected Graduation: 2027',
+    education: 'Bachelor of Science in Information Technology',
+    institution: 'Richfield Graduate Institute of Technology',
+    graduation: 'Expected 2027',
     skills: [
       'Networking',
       'Python',
@@ -170,10 +163,10 @@ const candidates: CandidateData[] = [
       'Windows',
     ],
     experienceTitle: 'IT Support Assistant',
-    experienceDuration: '7 months experience',
+    experienceDuration: '7 months',
     experienceDescription:
-      'Provided technical support, assisted with troubleshooting and helped maintain computer systems and networks.',
-    aiMatch: '78%',
+      'Provided technical support and assisted with troubleshooting and networking.',
+    aiMatch: 78,
   },
 ];
 
@@ -183,71 +176,79 @@ export default function CandidateProfileScreen() {
     opportunity?: string;
   }>();
 
-  const candidateName =
-    typeof params.name === 'string'
-      ? params.name
-      : 'Thabo Mokoena';
+  const [status, setStatus] =
+    useState<ApplicationStatus>('Under Review');
 
-  const opportunity =
-    typeof params.opportunity === 'string'
-      ? params.opportunity
-      : 'Graduate Data Analyst';
+  const [isConnected, setIsConnected] =
+    useState(false);
 
   const candidate =
     candidates.find(
-      (item) => item.name === candidateName
-    ) ?? candidates[0];
-
-  const [status, setStatus] =
-    useState<ApplicationStatus>(
-      'Under Review'
-    );
+      (item) => item.name === params.name
+    ) || candidates[0];
 
   useFocusEffect(
     useCallback(() => {
-      loadStatus();
+      loadCandidateData();
     }, [candidate.id])
   );
 
-  const loadStatus = async () => {
+  const loadCandidateData = async () => {
     try {
-      const saved =
+      const storedStatuses =
         await AsyncStorage.getItem(
           APPLICATION_STATUS_KEY
         );
 
-      if (!saved) {
-        setStatus(
-          candidate.id === '1' ||
-            candidate.id === '3'
+      if (storedStatuses) {
+        const parsedStatuses: Record<
+          string,
+          ApplicationStatus
+        > = JSON.parse(storedStatuses);
+
+        const defaultStatus =
+          candidate.id === '1' || candidate.id === '3'
             ? 'Shortlisted'
             : candidate.id === '5'
-            ? 'Rejected'
-            : 'Under Review'
+              ? 'Rejected'
+              : 'Under Review';
+
+        setStatus(
+          parsedStatuses[candidate.id] ||
+            defaultStatus
         );
-        return;
+      } else {
+        const defaultStatus =
+          candidate.id === '1' || candidate.id === '3'
+            ? 'Shortlisted'
+            : candidate.id === '5'
+              ? 'Rejected'
+              : 'Under Review';
+
+        setStatus(defaultStatus);
       }
 
-      const savedStatuses: Record<
-        string,
-        ApplicationStatus
-      > = JSON.parse(saved);
+      const storedConnections =
+        await AsyncStorage.getItem(
+          CONNECTIONS_KEY
+        );
 
-      const defaultStatus =
-        candidate.id === '1' ||
-        candidate.id === '3'
-          ? 'Shortlisted'
-          : candidate.id === '5'
-          ? 'Rejected'
-          : 'Under Review';
+      if (storedConnections) {
+        const connections: Connection[] =
+          JSON.parse(storedConnections);
 
-      setStatus(
-        savedStatuses[candidate.id] ??
-          defaultStatus
-      );
+        setIsConnected(
+          connections.some(
+            (connection) =>
+              connection.id === candidate.id
+          )
+        );
+      } else {
+        setIsConnected(false);
+      }
     } catch (error) {
       console.log(
-        'Error loading candidate status:',
+        'Error loading candidate data:',
         error
       );
     }
@@ -257,34 +258,113 @@ export default function CandidateProfileScreen() {
     newStatus: ApplicationStatus
   ) => {
     try {
-      const saved =
+      const stored =
         await AsyncStorage.getItem(
           APPLICATION_STATUS_KEY
         );
 
-      const savedStatuses: Record<
+      const statuses: Record<
         string,
         ApplicationStatus
-      > = saved
-        ? JSON.parse(saved)
+      > = stored
+        ? JSON.parse(stored)
         : {};
 
-      savedStatuses[candidate.id] =
-        newStatus;
+      statuses[candidate.id] = newStatus;
 
       await AsyncStorage.setItem(
         APPLICATION_STATUS_KEY,
-        JSON.stringify(savedStatuses)
+        JSON.stringify(statuses)
       );
 
       setStatus(newStatus);
     } catch (error) {
       console.log(
-        'Error saving candidate status:',
+        'Error saving application status:',
         error
       );
     }
   };
+
+  const handleConnect = async () => {
+    try {
+      const stored =
+        await AsyncStorage.getItem(
+          CONNECTIONS_KEY
+        );
+
+      const connections: Connection[] =
+        stored ? JSON.parse(stored) : [];
+
+      if (
+        connections.some(
+          (connection) =>
+            connection.id === candidate.id
+        )
+      ) {
+        setIsConnected(true);
+        return;
+      }
+
+      const newConnection: Connection = {
+        id: candidate.id,
+        name: candidate.name,
+        role: candidate.applied,
+        initials: candidate.name
+          .split(' ')
+          .map((part) => part[0])
+          .join('')
+          .slice(0, 2)
+          .toUpperCase(),
+        email: candidate.email,
+        connectedAt: new Date().toISOString(),
+      };
+
+      const updatedConnections = [
+        ...connections,
+        newConnection,
+      ];
+
+      await AsyncStorage.setItem(
+        CONNECTIONS_KEY,
+        JSON.stringify(updatedConnections)
+      );
+
+      setIsConnected(true);
+
+      Alert.alert(
+        'Connection Sent',
+        `You are now connected with ${candidate.name}.`
+      );
+    } catch (error) {
+      console.log(
+        'Error saving connection:',
+        error
+      );
+
+      Alert.alert(
+        'Error',
+        'Unable to save the connection.'
+      );
+    }
+  };
+
+    const handleMessage = () => {
+      router.push({
+        pathname: '/business/chat',
+        params: {
+          conversationId: candidate.id,
+          name: candidate.name,
+          role: candidate.applied,
+          initials: candidate.name
+            .split(' ')
+            .map((part) => part[0])
+            .join('')
+            .slice(0, 2)
+            .toUpperCase(),
+        },
+      });
+    };
 
   const handleShortlist = () => {
     Alert.alert(
@@ -297,12 +377,12 @@ export default function CandidateProfileScreen() {
         },
         {
           text: 'Shortlist',
-          onPress: () => {
-            saveStatus('Shortlisted');
+          onPress: async () => {
+            await saveStatus('Shortlisted');
 
             Alert.alert(
               'Candidate Shortlisted',
-              `${candidate.name} has been shortlisted successfully.`
+              `${candidate.name} has been shortlisted.`
             );
           },
         },
@@ -321,8 +401,8 @@ export default function CandidateProfileScreen() {
         },
         {
           text: 'Continue',
-          onPress: () => {
-            saveStatus('Interview');
+          onPress: async () => {
+            await saveStatus('Interview');
 
             Alert.alert(
               'Interview Stage',
@@ -346,8 +426,8 @@ export default function CandidateProfileScreen() {
         {
           text: 'Reject',
           style: 'destructive',
-          onPress: () => {
-            saveStatus('Rejected');
+          onPress: async () => {
+            await saveStatus('Rejected');
 
             Alert.alert(
               'Candidate Rejected',
@@ -370,12 +450,12 @@ export default function CandidateProfileScreen() {
         },
         {
           text: 'Reconsider',
-          onPress: () => {
-            saveStatus('Under Review');
+          onPress: async () => {
+            await saveStatus('Under Review');
 
             Alert.alert(
               'Candidate Reconsidered',
-              `${candidate.name} is now under review again.`
+              `${candidate.name} is now Under Review.`
             );
           },
         },
@@ -383,271 +463,344 @@ export default function CandidateProfileScreen() {
     );
   };
 
-  const getStatusColors = () => {
+  const getStatusStyle = () => {
     switch (status) {
       case 'Shortlisted':
-        return {
-          backgroundColor: '#DCFCE7',
-          color: '#166534',
-        };
+        return styles.statusShortlisted;
 
       case 'Interview':
-        return {
-          backgroundColor: '#DBEAFE',
-          color: '#1D4ED8',
-        };
+        return styles.statusInterview;
 
       case 'Rejected':
-        return {
-          backgroundColor: '#FEE2E2',
-          color: '#991B1B',
-        };
+        return styles.statusRejected;
 
       default:
-        return {
-          backgroundColor: '#FEF3C7',
-          color: '#92400E',
-        };
+        return styles.statusReview;
     }
   };
 
-  const statusColors = getStatusColors();
+  const getStatusTextStyle = () => {
+    switch (status) {
+      case 'Shortlisted':
+        return styles.statusTextShortlisted;
+
+      case 'Interview':
+        return styles.statusTextInterview;
+
+      case 'Rejected':
+        return styles.statusTextRejected;
+
+      default:
+        return styles.statusTextReview;
+    }
+  };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+
+      {/* HEADER */}
       <View style={styles.header}>
         <Pressable
           style={styles.backButton}
-          onPress={() => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace(
-                '/business/applications'
-              );
-            }
-          }}
+          onPress={() =>
+            router.replace('/business/candidates')
+          }
         >
-          <Text style={styles.backText}>
-            ← Back
-          </Text>
+          <Text style={styles.backText}>‹</Text>
         </Pressable>
 
-        <Text style={styles.headerTitle}>
-          Candidate Profile
-        </Text>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.headerTitle}>
+            Candidate Profile
+          </Text>
 
-        <View style={{ width: 60 }} />
+          <Text style={styles.headerSubtitle}>
+            Review candidate information
+          </Text>
+        </View>
+
+        <Pressable
+          style={styles.profileButton}
+          onPress={() =>
+            router.replace('/business/company-profile')
+          }
+        >
+          <Text style={styles.profileText}>
+            AT
+          </Text>
+        </Pressable>
       </View>
 
       <ScrollView
-        contentContainerStyle={
-          styles.content
-        }
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Candidate Header */}
+
+        {/* PROFILE CARD */}
         <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
+          <View style={styles.avatarLarge}>
+            <Text style={styles.avatarLargeText}>
               {candidate.name
                 .split(' ')
-                .map(
-                  (name) => name[0]
-                )
+                .map((part) => part[0])
                 .join('')
                 .slice(0, 2)
                 .toUpperCase()}
             </Text>
           </View>
 
-          <Text style={styles.name}>
+          <Text style={styles.candidateName}>
             {candidate.name}
           </Text>
 
-          <Text style={styles.email}>
+          <Text style={styles.candidateEmail}>
             {candidate.email}
           </Text>
 
           <View
             style={[
               styles.statusBadge,
-              {
-                backgroundColor:
-                  statusColors.backgroundColor,
-              },
+              getStatusStyle(),
             ]}
           >
             <Text
               style={[
-                styles.statusText,
-                {
-                  color:
-                    statusColors.color,
-                },
+                styles.statusBadgeText,
+                getStatusTextStyle(),
               ]}
             >
               {status}
             </Text>
           </View>
+
+          {/* CONNECTION ACTIONS */}
+          <View style={styles.connectionActions}>
+
+            <Pressable
+              style={[
+                styles.connectButton,
+                isConnected &&
+                  styles.connectedButton,
+              ]}
+              onPress={handleConnect}
+            >
+              <Ionicons
+                name={
+                  isConnected
+                    ? 'checkmark-circle'
+                    : 'person-add-outline'
+                }
+                size={18}
+                color={
+                  isConnected
+                    ? '#15803D'
+                    : '#FFFFFF'
+                }
+              />
+
+              <Text
+                style={[
+                  styles.connectButtonText,
+                  isConnected &&
+                    styles.connectedButtonText,
+                ]}
+              >
+                {isConnected
+                  ? 'Connected'
+                  : 'Connect'}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.messageButton}
+              onPress={handleMessage}
+            >
+              <Ionicons
+                name="chatbubble-outline"
+                size={18}
+                color="#2563EB"
+              />
+
+              <Text style={styles.messageButtonText}>
+                Message
+              </Text>
+            </Pressable>
+
+          </View>
         </View>
 
-        {/* Applied Position */}
-        <View style={styles.section}>
+        {/* APPLIED POSITION */}
+        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>
             Applied Position
           </Text>
 
-          <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>
-              Opportunity
-            </Text>
+          <View style={styles.infoRow}>
+            <View style={styles.infoIcon}>
+              <Ionicons
+                name="briefcase-outline"
+                size={19}
+                color="#2563EB"
+              />
+            </View>
 
-            <Text style={styles.infoValue}>
-              {opportunity}
-            </Text>
+            <View style={styles.infoTextContainer}>
+              <Text style={styles.infoLabel}>
+                Opportunity
+              </Text>
 
-            <View style={styles.divider} />
+              <Text style={styles.infoValue}>
+                {params.opportunity ||
+                  candidate.applied}
+              </Text>
+            </View>
+          </View>
 
-            <Text style={styles.infoLabel}>
-              Application Status
-            </Text>
+          <View style={styles.infoRow}>
+            <View style={styles.infoIcon}>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={19}
+                color="#2563EB"
+              />
+            </View>
 
-            <Text
-              style={[
-                styles.statusValue,
-                {
-                  color:
-                    statusColors.color,
-                },
-              ]}
-            >
-              {status}
-            </Text>
+            <View style={styles.infoTextContainer}>
+              <Text style={styles.infoLabel}>
+                Application Status
+              </Text>
 
-            <View style={styles.divider} />
+              <Text style={styles.infoValue}>
+                {status}
+              </Text>
+            </View>
+          </View>
 
-            <Text style={styles.infoLabel}>
-              Applied
-            </Text>
+          <View style={styles.infoRow}>
+            <View style={styles.infoIcon}>
+              <Ionicons
+                name="calendar-outline"
+                size={19}
+                color="#2563EB"
+              />
+            </View>
 
-            <Text style={styles.infoValue}>
-              {candidate.applied}
-            </Text>
+            <View style={styles.infoTextContainer}>
+              <Text style={styles.infoLabel}>
+                Applied
+              </Text>
+
+              <Text style={styles.infoValue}>
+                Recently
+              </Text>
+            </View>
           </View>
         </View>
 
-        {/* Education */}
-        <View style={styles.section}>
+        {/* EDUCATION */}
+        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>
             Education
           </Text>
 
-          <View style={styles.infoCard}>
-            <Text style={styles.infoValue}>
-              {candidate.education}
-            </Text>
+          <Text style={styles.educationTitle}>
+            {candidate.education}
+          </Text>
 
-            <Text style={styles.secondaryText}>
-              {candidate.institution}
-            </Text>
+          <Text style={styles.educationInstitution}>
+            {candidate.institution}
+          </Text>
 
-            <Text style={styles.secondaryText}>
-              {candidate.graduation}
-            </Text>
-          </View>
+          <Text style={styles.educationGraduation}>
+            {candidate.graduation}
+          </Text>
         </View>
 
-        {/* Skills */}
-        <View style={styles.section}>
+        {/* SKILLS */}
+        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>
             Skills
           </Text>
 
           <View style={styles.skillsContainer}>
-            {candidate.skills.map(
-              (skill) => (
-                <View
-                  key={skill}
-                  style={styles.skill}
-                >
-                  <Text
-                    style={
-                      styles.skillText
-                    }
-                  >
-                    {skill}
-                  </Text>
-                </View>
-              )
-            )}
+            {candidate.skills.map((skill) => (
+              <View
+                key={skill}
+                style={styles.skillChip}
+              >
+                <Text style={styles.skillText}>
+                  {skill}
+                </Text>
+              </View>
+            ))}
           </View>
         </View>
 
-        {/* AI Match */}
+        {/* AI MATCH */}
         <View style={styles.aiCard}>
-          <Text style={styles.aiTitle}>
-            🤖 AI Candidate Match
-          </Text>
+          <View style={styles.aiHeader}>
+            <View style={styles.aiIcon}>
+              <Ionicons
+                name="sparkles-outline"
+                size={20}
+                color="#2563EB"
+              />
+            </View>
 
-          <Text style={styles.aiScore}>
-            {candidate.aiMatch}
-          </Text>
+            <View style={styles.aiHeaderText}>
+              <Text style={styles.aiTitle}>
+                AI Candidate Match
+              </Text>
 
-          <View
-            style={styles.matchBarBackground}
-          >
+              <Text style={styles.aiSubtitle}>
+                Compatibility with this opportunity
+              </Text>
+            </View>
+
+            <Text style={styles.aiScore}>
+              {candidate.aiMatch}%
+            </Text>
+          </View>
+
+          <View style={styles.progressBackground}>
             <View
               style={[
-                styles.matchBar,
+                styles.progressFill,
                 {
-                  width:
-                    `${parseFloat(candidate.aiMatch)}%`,
+                  width: `${candidate.aiMatch}%`,
                 },
               ]}
             />
           </View>
 
-          <Text
-            style={styles.aiDescription}
-          >
-            This candidate is a strong match
-            for the opportunity based on
-            their skills, qualification and
-            career profile.
+          <Text style={styles.aiDescription}>
+            This score is based on the candidate's
+            skills, education and experience.
           </Text>
         </View>
 
-        {/* Experience */}
-        <View style={styles.section}>
+        {/* EXPERIENCE */}
+        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>
             Experience
           </Text>
 
-          <View style={styles.infoCard}>
-            <Text style={styles.infoValue}>
-              {candidate.experienceTitle}
-            </Text>
+          <Text style={styles.experienceTitle}>
+            {candidate.experienceTitle}
+          </Text>
 
-            <Text
-              style={styles.secondaryText}
-            >
-              {candidate.experienceDuration}
-            </Text>
+          <Text style={styles.experienceDuration}>
+            {candidate.experienceDuration}
+          </Text>
 
-            <Text
-              style={styles.description}
-            >
-              {
-                candidate.experienceDescription
-              }
-            </Text>
-          </View>
+          <Text style={styles.experienceDescription}>
+            {candidate.experienceDescription}
+          </Text>
         </View>
 
-        {/* Recruitment Actions */}
-        <View style={styles.section}>
+        {/* RECRUITMENT ACTIONS */}
+        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>
             Recruitment Actions
           </Text>
@@ -655,33 +808,31 @@ export default function CandidateProfileScreen() {
           {status === 'Under Review' && (
             <>
               <Pressable
-                style={
-                  styles.primaryButton
-                }
-                onPress={
-                  handleShortlist
-                }
+                style={styles.primaryAction}
+                onPress={handleShortlist}
               >
-                <Text
-                  style={
-                    styles.primaryButtonText
-                  }
-                >
-                  ✓ Shortlist Candidate
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={19}
+                  color="#FFFFFF"
+                />
+
+                <Text style={styles.primaryActionText}>
+                  Shortlist Candidate
                 </Text>
               </Pressable>
 
               <Pressable
-                style={
-                  styles.rejectButton
-                }
+                style={styles.dangerAction}
                 onPress={handleReject}
               >
-                <Text
-                  style={
-                    styles.rejectButtonText
-                  }
-                >
+                <Ionicons
+                  name="close-circle-outline"
+                  size={19}
+                  color="#DC2626"
+                />
+
+                <Text style={styles.dangerActionText}>
                   Reject Candidate
                 </Text>
               </Pressable>
@@ -691,33 +842,31 @@ export default function CandidateProfileScreen() {
           {status === 'Shortlisted' && (
             <>
               <Pressable
-                style={
-                  styles.interviewButton
-                }
-                onPress={
-                  handleInterview
-                }
+                style={styles.primaryAction}
+                onPress={handleInterview}
               >
-                <Text
-                  style={
-                    styles.interviewButtonText
-                  }
-                >
-                  📅 Move to Interview
+                <Ionicons
+                  name="calendar-outline"
+                  size={19}
+                  color="#FFFFFF"
+                />
+
+                <Text style={styles.primaryActionText}>
+                  Move to Interview
                 </Text>
               </Pressable>
 
               <Pressable
-                style={
-                  styles.rejectButton
-                }
+                style={styles.dangerAction}
                 onPress={handleReject}
               >
-                <Text
-                  style={
-                    styles.rejectButtonText
-                  }
-                >
+                <Ionicons
+                  name="close-circle-outline"
+                  size={19}
+                  color="#DC2626"
+                />
+
+                <Text style={styles.dangerActionText}>
                   Reject Candidate
                 </Text>
               </Pressable>
@@ -726,16 +875,16 @@ export default function CandidateProfileScreen() {
 
           {status === 'Interview' && (
             <Pressable
-              style={
-                styles.rejectButton
-              }
+              style={styles.dangerAction}
               onPress={handleReject}
             >
-              <Text
-                style={
-                  styles.rejectButtonText
-                }
-              >
+              <Ionicons
+                name="close-circle-outline"
+                size={19}
+                color="#DC2626"
+              />
+
+              <Text style={styles.dangerActionText}>
                 Reject Candidate
               </Text>
             </Pressable>
@@ -743,20 +892,86 @@ export default function CandidateProfileScreen() {
 
           {status === 'Rejected' && (
             <Pressable
-              style={styles.reviewButton}
-              onPress={
-                handleReconsider
-              }
+              style={styles.secondaryAction}
+              onPress={handleReconsider}
             >
-              <Text
-                style={styles.reviewText}
-              >
-                ↻ Reconsider Candidate
+              <Ionicons
+                name="refresh-outline"
+                size={19}
+                color="#2563EB"
+              />
+
+              <Text style={styles.secondaryActionText}>
+                Reconsider Candidate
               </Text>
             </Pressable>
           )}
         </View>
+
+        <View style={styles.bottomSpace} />
+
       </ScrollView>
+
+      {/* BOTTOM NAVIGATION */}
+      <View style={styles.bottomNav}>
+
+        <Pressable
+          style={styles.navItem}
+          onPress={() =>
+            router.replace('/business/dashboard')
+          }
+        >
+          <View style={styles.navIconContainer}>
+            <Ionicons
+              name="home-outline"
+              size={20}
+              color="#64748B"
+            />
+          </View>
+
+          <Text style={styles.navLabel}>
+            Home
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.navItem}
+          onPress={() =>
+            router.replace('/business/messages')
+          }
+        >
+          <View style={styles.navIconContainer}>
+            <Ionicons
+              name="chatbubble-outline"
+              size={20}
+              color="#64748B"
+            />
+          </View>
+
+          <Text style={styles.navLabel}>
+            Messages
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.navItem}
+          onPress={() =>
+            router.replace('/business/company-profile')
+          }
+        >
+          <View style={styles.navIconContainer}>
+            <Text style={styles.profileNavIcon}>
+              AT
+            </Text>
+          </View>
+
+          <Text style={styles.navLabel}>
+            Profile
+          </Text>
+        </Pressable>
+
+      </View>
+
     </View>
   );
 }
@@ -768,142 +983,276 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0B1F3A',
     paddingTop: 55,
-    paddingBottom: 18,
-    paddingHorizontal: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    paddingBottom: 22,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
 
   backButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
   },
 
   backText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2563EB',
+    fontSize: 32,
+    lineHeight: 34,
+    color: '#FFFFFF',
+    fontWeight: '300',
+    marginTop: -3,
+  },
+
+  headerTextContainer: {
+    flex: 1,
   },
 
   headerTitle: {
-    fontSize: 19,
-    fontWeight: '700',
-    color: '#0F172A',
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+
+  headerSubtitle: {
+    color: '#CBD5E1',
+    fontSize: 12,
+    marginTop: 3,
+  },
+
+  profileButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+
+  profileText: {
+    color: '#0B1F3A',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
+  scrollView: {
+    flex: 1,
   },
 
   content: {
-    padding: 20,
-    paddingBottom: 50,
+    padding: 16,
+    paddingBottom: 30,
   },
 
   profileCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 22,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 14,
   },
 
-  avatar: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: '#DBEAFE',
+  avatarLarge: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    backgroundColor: '#DCE7F5',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
   },
 
-  avatarText: {
-    fontSize: 25,
-    fontWeight: '700',
-    color: '#1D4ED8',
+  avatarLargeText: {
+    color: '#1E4B7A',
+    fontSize: 22,
+    fontWeight: '900',
   },
 
-  name: {
-    fontSize: 23,
-    fontWeight: '700',
+  candidateName: {
     color: '#0F172A',
+    fontSize: 21,
+    fontWeight: '800',
+    textAlign: 'center',
   },
 
-  email: {
-    fontSize: 13,
+  candidateEmail: {
     color: '#64748B',
+    fontSize: 12,
     marginTop: 5,
   },
 
   statusBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
     borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     marginTop: 12,
   },
 
-  statusText: {
-    fontSize: 12,
-    fontWeight: '700',
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
 
-  section: {
-    marginBottom: 22,
+  statusShortlisted: {
+    backgroundColor: '#DCFCE7',
+  },
+
+  statusTextShortlisted: {
+    color: '#15803D',
+  },
+
+  statusInterview: {
+    backgroundColor: '#DBEAFE',
+  },
+
+  statusTextInterview: {
+    color: '#1D4ED8',
+  },
+
+  statusRejected: {
+    backgroundColor: '#FEE2E2',
+  },
+
+  statusTextRejected: {
+    color: '#DC2626',
+  },
+
+  statusReview: {
+    backgroundColor: '#FEF3C7',
+  },
+
+  statusTextReview: {
+    color: '#B45309',
+  },
+
+  connectionActions: {
+    flexDirection: 'row',
+    width: '100%',
+    marginTop: 18,
+    gap: 10,
+  },
+
+  connectButton: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#2563EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+
+  connectButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  connectedButton: {
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+
+  connectedButtonText: {
+    color: '#15803D',
+  },
+
+  messageButton: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+
+  messageButtonText: {
+    color: '#2563EB',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 16,
+    marginBottom: 14,
   },
 
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
     color: '#0F172A',
-    marginBottom: 10,
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 14,
   },
 
-  infoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+
+  infoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 11,
+  },
+
+  infoTextContainer: {
+    flex: 1,
   },
 
   infoLabel: {
-    fontSize: 12,
-    color: '#64748B',
-    marginBottom: 5,
+    color: '#94A3B8',
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
 
   infoValue: {
-    fontSize: 15,
-    fontWeight: '600',
     color: '#0F172A',
-  },
-
-  statusValue: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-
-  secondaryText: {
     fontSize: 13,
-    color: '#64748B',
+    fontWeight: '700',
+    marginTop: 3,
+  },
+
+  educationTitle: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+
+  educationInstitution: {
+    color: '#475569',
+    fontSize: 12,
     marginTop: 6,
   },
 
-  description: {
-    fontSize: 13,
-    color: '#475569',
-    lineHeight: 20,
-    marginTop: 12,
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: '#E2E8F0',
-    marginVertical: 14,
+  educationGraduation: {
+    color: '#2563EB',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 6,
   },
 
   skillsContainer: {
@@ -912,118 +1261,207 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  skill: {
+  skillChip: {
     backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
     borderRadius: 20,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
   },
 
   skillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#2563EB',
+    color: '#1D4ED8',
+    fontSize: 11,
+    fontWeight: '700',
   },
 
   aiCard: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 22,
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: '#BFDBFE',
+    padding: 16,
+    marginBottom: 14,
+  },
+
+  aiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  aiIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 11,
+  },
+
+  aiHeaderText: {
+    flex: 1,
   },
 
   aiTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#3730A3',
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+
+  aiSubtitle: {
+    color: '#64748B',
+    fontSize: 11,
+    marginTop: 3,
   },
 
   aiScore: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: '#4F46E5',
-    marginTop: 8,
+    color: '#15803D',
+    fontSize: 21,
+    fontWeight: '900',
   },
 
-  matchBarBackground: {
-    height: 7,
-    backgroundColor: '#C7D2FE',
-    borderRadius: 10,
-    marginTop: 5,
+  progressBackground: {
+    height: 8,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 8,
+    marginTop: 15,
     overflow: 'hidden',
   },
 
-  matchBar: {
+  progressFill: {
     height: '100%',
-    backgroundColor: '#4F46E5',
-    borderRadius: 10,
+    backgroundColor: '#16A34A',
+    borderRadius: 8,
   },
 
   aiDescription: {
-    fontSize: 13,
-    color: '#4338CA',
-    lineHeight: 19,
+    color: '#64748B',
+    fontSize: 11,
+    lineHeight: 17,
     marginTop: 10,
   },
 
-  primaryButton: {
+  experienceTitle: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+
+  experienceDuration: {
+    color: '#2563EB',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+
+  experienceDescription: {
+    color: '#64748B',
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 8,
+  },
+
+  primaryAction: {
+    height: 46,
+    borderRadius: 12,
     backgroundColor: '#2563EB',
-    paddingVertical: 14,
-    borderRadius: 10,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     marginBottom: 10,
   },
 
-  primaryButtonText: {
+  primaryActionText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
   },
 
-  interviewButton: {
-    backgroundColor: '#DBEAFE',
+  dangerAction: {
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: '#93C5FD',
-    paddingVertical: 14,
-    borderRadius: 10,
+    borderColor: '#FECACA',
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    justifyContent: 'center',
+    gap: 8,
   },
 
-  interviewButtonText: {
-    color: '#1D4ED8',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
-  rejectButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-
-  rejectButtonText: {
+  dangerActionText: {
     color: '#DC2626',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
   },
 
-  reviewButton: {
-    backgroundColor: '#FEF3C7',
-    paddingVertical: 14,
+  secondaryAction: {
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+
+  secondaryActionText: {
+    color: '#2563EB',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  bottomSpace: {
+    height: 90,
+  },
+
+  bottomNav: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 78,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 5,
+    paddingBottom: 4,
+  },
+
+  navItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 72,
+  },
+
+  navIconContainer: {
+    width: 40,
+    height: 32,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  reviewText: {
-    color: '#92400E',
-    fontSize: 14,
-    fontWeight: '700',
+  profileNavIcon: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '900',
+  },
+
+  navLabel: {
+    fontSize: 9,
+    color: '#64748B',
+    fontWeight: '600',
+    marginTop: 2,
+    textAlign: 'center',
   },
 });

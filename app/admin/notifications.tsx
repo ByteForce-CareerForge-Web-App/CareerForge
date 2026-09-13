@@ -7,17 +7,28 @@ import {
   Pressable,
   TextInput,
   Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Keyboard,
+  Platform,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const NOTIFICATIONS_KEY = 'careerforge_admin_notifications';
 
+type NotificationType =
+  | 'Platform'
+  | 'Users'
+  | 'Opportunities'
+  | 'Verification';
+
 type Notification = {
   id: string;
   title: string;
   message: string;
-  type: 'Platform' | 'Users' | 'Opportunities' | 'Verification';
+  type: NotificationType;
   time: string;
   active: boolean;
 };
@@ -61,12 +72,29 @@ const DEFAULT_NOTIFICATIONS: Notification[] = [
   },
 ];
 
+const NOTIFICATION_TYPES: NotificationType[] = [
+  'Platform',
+  'Users',
+  'Opportunities',
+  'Verification',
+];
+
 export default function AdminNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>(
     []
   );
 
   const [search, setSearch] = useState('');
+
+  // Create notification modal
+  const [createModalVisible, setCreateModalVisible] =
+    useState(false);
+
+  const [newTitle, setNewTitle] = useState('');
+  const [newMessage, setNewMessage] = useState('');
+  const [newType, setNewType] =
+    useState<NotificationType>('Platform');
+  const [newActive, setNewActive] = useState(true);
 
   const loadNotifications = async () => {
     try {
@@ -157,10 +185,66 @@ export default function AdminNotifications() {
     );
   };
 
-  const createNotification = () => {
+  const openCreateModal = () => {
+    setNewTitle('');
+    setNewMessage('');
+    setNewType('Platform');
+    setNewActive(true);
+    setCreateModalVisible(true);
+  };
+
+  const closeCreateModal = () => {
+    Keyboard.dismiss();
+    setCreateModalVisible(false);
+  };
+
+  const createNotification = async () => {
+    const title = newTitle.trim();
+    const message = newMessage.trim();
+
+    if (!title) {
+      Alert.alert(
+        'Missing Title',
+        'Please enter a notification title.'
+      );
+      return;
+    }
+
+    if (!message) {
+      Alert.alert(
+        'Missing Message',
+        'Please enter a notification message.'
+      );
+      return;
+    }
+
+    const newNotification: Notification = {
+      id: `${Date.now()}`,
+      title,
+      message,
+      type: newType,
+      time: 'Just now',
+      active: newActive,
+    };
+
+    const updatedNotifications = [
+      newNotification,
+      ...notifications,
+    ];
+
+    await saveNotifications(updatedNotifications);
+
+    Keyboard.dismiss();
+    setCreateModalVisible(false);
+
+    setNewTitle('');
+    setNewMessage('');
+    setNewType('Platform');
+    setNewActive(true);
+
     Alert.alert(
-      'Create Notification',
-      'Notification creation will be connected to the backend later.'
+      'Notification Created',
+      `"${title}" has been added successfully.`
     );
   };
 
@@ -216,6 +300,8 @@ export default function AdminNotifications() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         {/* SUMMARY */}
         <View style={styles.summaryGrid}>
@@ -235,7 +321,7 @@ export default function AdminNotifications() {
 
           <View style={styles.summaryCard}>
             <Text style={styles.summaryIcon}>
-              ✅
+              ✓
             </Text>
 
             <Text style={styles.summaryValue}>
@@ -249,7 +335,7 @@ export default function AdminNotifications() {
 
           <View style={styles.summaryCard}>
             <Text style={styles.summaryIcon}>
-              📢
+              —
             </Text>
 
             <Text style={styles.summaryValue}>
@@ -265,7 +351,7 @@ export default function AdminNotifications() {
         {/* CREATE */}
         <Pressable
           style={styles.createButton}
-          onPress={createNotification}
+          onPress={openCreateModal}
         >
           <Text style={styles.createButtonText}>
             + Create Notification
@@ -279,6 +365,9 @@ export default function AdminNotifications() {
           placeholder="Search notifications..."
           placeholderTextColor="#94A3B8"
           style={styles.searchInput}
+          returnKeyType="done"
+          blurOnSubmit
+          onSubmitEditing={() => Keyboard.dismiss()}
         />
 
         {/* SECTION */}
@@ -297,14 +386,14 @@ export default function AdminNotifications() {
                   <Text style={styles.iconText}>
                     {notification.type ===
                     'Verification'
-                      ? '✅'
+                      ? '✓'
                       : notification.type ===
                         'Opportunities'
-                      ? '💼'
+                      ? 'O'
                       : notification.type ===
                         'Users'
-                      ? '👥'
-                      : '🔔'}
+                      ? 'U'
+                      : 'N'}
                   </Text>
                 </View>
 
@@ -424,6 +513,215 @@ export default function AdminNotifications() {
           </View>
         )}
       </ScrollView>
+
+      {/* CREATE NOTIFICATION MODAL */}
+      <Modal
+        visible={createModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeCreateModal}
+      >
+        <TouchableWithoutFeedback
+          onPress={Keyboard.dismiss}
+        >
+          <KeyboardAvoidingView
+            style={styles.modalOverlay}
+            behavior={
+              Platform.OS === 'ios'
+                ? 'padding'
+                : 'height'
+            }
+          >
+            <TouchableWithoutFeedback>
+              <View style={styles.createModalCard}>
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={
+                    styles.modalContent
+                  }
+                >
+                  <View style={styles.modalHeader}>
+                    <View>
+                      <Text style={styles.modalTitle}>
+                        Create Notification
+                      </Text>
+
+                      <Text
+                        style={styles.modalSubtitle}
+                      >
+                        Send a notification to platform users
+                      </Text>
+                    </View>
+
+                    <Pressable
+                      style={styles.modalCloseButton}
+                      onPress={closeCreateModal}
+                    >
+                      <Text
+                        style={styles.modalCloseText}
+                      >
+                        ×
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  {/* TITLE */}
+                  <Text style={styles.fieldLabel}>
+                    Notification Title
+                  </Text>
+
+                  <TextInput
+                    value={newTitle}
+                    onChangeText={setNewTitle}
+                    placeholder="Enter notification title"
+                    placeholderTextColor="#94A3B8"
+                    style={styles.modalInput}
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                  />
+
+                  {/* MESSAGE */}
+                  <Text style={styles.fieldLabel}>
+                    Message
+                  </Text>
+
+                  <TextInput
+                    value={newMessage}
+                    onChangeText={setNewMessage}
+                    placeholder="Enter notification message"
+                    placeholderTextColor="#94A3B8"
+                    style={[
+                      styles.modalInput,
+                      styles.messageInput,
+                    ]}
+                    multiline
+                    textAlignVertical="top"
+                    returnKeyType="default"
+                  />
+
+                  {/* TYPE */}
+                  <Text style={styles.fieldLabel}>
+                    Notification Type
+                  </Text>
+
+                  <View style={styles.typeGrid}>
+                    {NOTIFICATION_TYPES.map(
+                      (type) => (
+                        <Pressable
+                          key={type}
+                          style={[
+                            styles.typeButton,
+                            newType === type &&
+                              styles.typeButtonActive,
+                          ]}
+                          onPress={() =>
+                            setNewType(type)
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.typeButtonText,
+                              newType === type &&
+                                styles.typeButtonTextActive,
+                            ]}
+                          >
+                            {type}
+                          </Text>
+                        </Pressable>
+                      )
+                    )}
+                  </View>
+
+                  {/* STATUS */}
+                  <Text style={styles.fieldLabel}>
+                    Notification Status
+                  </Text>
+
+                  <View style={styles.statusSelector}>
+                    <Pressable
+                      style={[
+                        styles.statusOption,
+                        newActive &&
+                          styles.statusOptionActive,
+                      ]}
+                      onPress={() =>
+                        setNewActive(true)
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.statusOptionText,
+                          newActive &&
+                            styles.statusOptionTextActive,
+                        ]}
+                      >
+                        Active
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={[
+                        styles.statusOption,
+                        !newActive &&
+                          styles.statusOptionInactive,
+                      ]}
+                      onPress={() =>
+                        setNewActive(false)
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.statusOptionText,
+                          !newActive &&
+                            styles.statusOptionInactiveText,
+                        ]}
+                      >
+                        Inactive
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  {/* ACTIONS */}
+                  <View style={styles.modalActions}>
+                    <Pressable
+                      style={[
+                        styles.modalActionButton,
+                        styles.modalCancelButton,
+                      ]}
+                      onPress={closeCreateModal}
+                    >
+                      <Text
+                        style={
+                          styles.modalCancelText
+                        }
+                      >
+                        Cancel
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={[
+                        styles.modalActionButton,
+                        styles.modalCreateButton,
+                      ]}
+                      onPress={createNotification}
+                    >
+                      <Text
+                        style={
+                          styles.modalCreateText
+                        }
+                      >
+                        Create
+                      </Text>
+                    </Pressable>
+                  </View>
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 }
@@ -483,7 +781,6 @@ const styles = StyleSheet.create({
 
   summaryGrid: {
     flexDirection: 'row',
-    gap: 10,
     marginBottom: 15,
   },
 
@@ -495,11 +792,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    marginHorizontal: 4,
   },
 
   summaryIcon: {
-    fontSize: 22,
+    fontSize: 20,
     marginBottom: 5,
+    color: '#0F172A',
+    fontWeight: '800',
   },
 
   summaryValue: {
@@ -572,7 +872,9 @@ const styles = StyleSheet.create({
   },
 
   iconText: {
-    fontSize: 22,
+    fontSize: 17,
+    color: '#0F172A',
+    fontWeight: '800',
   },
 
   notificationInfo: {
@@ -633,7 +935,6 @@ const styles = StyleSheet.create({
 
   actionsRow: {
     flexDirection: 'row',
-    gap: 8,
     marginTop: 14,
   },
 
@@ -643,6 +944,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
     borderWidth: 1,
+    marginHorizontal: 4,
   },
 
   enableButton: {
@@ -687,7 +989,7 @@ const styles = StyleSheet.create({
   },
 
   emptyIcon: {
-    fontSize: 32,
+    fontSize: 30,
     marginBottom: 10,
   },
 
@@ -701,5 +1003,191 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 12,
     marginTop: 5,
+  },
+
+  /* CREATE MODAL */
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: '#00000088',
+    justifyContent: 'flex-end',
+  },
+
+  createModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '92%',
+  },
+
+  modalContent: {
+    padding: 20,
+    paddingBottom: 35,
+  },
+
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+
+  modalTitle: {
+    color: '#0F172A',
+    fontSize: 21,
+    fontWeight: '800',
+  },
+
+  modalSubtitle: {
+    color: '#64748B',
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4,
+    maxWidth: 280,
+  },
+
+  modalCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 'auto',
+  },
+
+  modalCloseText: {
+    color: '#475569',
+    fontSize: 25,
+    lineHeight: 27,
+    fontWeight: '500',
+  },
+
+  fieldLabel: {
+    color: '#334155',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 7,
+    marginTop: 4,
+  },
+
+  modalInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: '#0F172A',
+    fontSize: 14,
+    marginBottom: 15,
+  },
+
+  messageInput: {
+    minHeight: 100,
+    maxHeight: 150,
+  },
+
+  typeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 14,
+  },
+
+  typeButton: {
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    marginRight: 7,
+    marginBottom: 7,
+  },
+
+  typeButtonActive: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
+  },
+
+  typeButtonText: {
+    color: '#475569',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  typeButtonTextActive: {
+    color: '#FFFFFF',
+  },
+
+  statusSelector: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+
+  statusOption: {
+    flex: 1,
+    paddingVertical: 11,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    marginHorizontal: 4,
+  },
+
+  statusOptionActive: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#86EFAC',
+  },
+
+  statusOptionInactive: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#CBD5E1',
+  },
+
+  statusOptionText: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  statusOptionTextActive: {
+    color: '#15803D',
+  },
+
+  statusOptionInactiveText: {
+    color: '#475569',
+  },
+
+  modalActions: {
+    flexDirection: 'row',
+  },
+
+  modalActionButton: {
+    flex: 1,
+    borderRadius: 11,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+
+  modalCancelButton: {
+    backgroundColor: '#F1F5F9',
+  },
+
+  modalCancelText: {
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  modalCreateButton: {
+    backgroundColor: '#0F172A',
+  },
+
+  modalCreateText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
   },
 });

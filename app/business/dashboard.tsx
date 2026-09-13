@@ -1,3 +1,7 @@
+import React, {
+  useCallback,
+  useState,
+} from 'react';
 import {
   View,
   Text,
@@ -5,259 +9,667 @@ import {
   Pressable,
   ScrollView,
 } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { router } from 'expo-router';
+const OPPORTUNITIES_KEY =
+  'careerforge_business_opportunities';
+
+const APPLICATION_STATUS_KEY =
+  'careerforge_business_application_statuses';
+
+type Opportunity = {
+  id: string;
+  title?: string;
+  company?: string;
+  status?: string;
+  [key: string]: any;
+};
+
+type ApplicationStatus =
+  | 'Under Review'
+  | 'Shortlisted'
+  | 'Interview'
+  | 'Rejected';
 
 export default function BusinessDashboard() {
+  const [activeJobs, setActiveJobs] = useState(4);
+  const [totalApplications, setTotalApplications] =
+    useState(229);
+  const [shortlisted, setShortlisted] = useState(18);
+  const [interviews, setInterviews] = useState(6);
+
+  const [companyName, setCompanyName] =
+    useState('ABC Technologies');
+
+  const loadDashboardData = async () => {
+    try {
+      /* ---------------- COMPANY PROFILE ---------------- */
+
+      const companySaved =
+        await AsyncStorage.getItem(
+          'careerforge_business_profile'
+        );
+
+      if (companySaved) {
+        const profile = JSON.parse(companySaved);
+
+        if (profile.companyName) {
+          setCompanyName(profile.companyName);
+        }
+      }
+
+      /* ---------------- OPPORTUNITIES ---------------- */
+
+      const opportunitiesSaved =
+        await AsyncStorage.getItem(
+          OPPORTUNITIES_KEY
+        );
+
+      if (opportunitiesSaved) {
+        const opportunities: Opportunity[] =
+          JSON.parse(opportunitiesSaved);
+
+        if (opportunities.length > 0) {
+          const active = opportunities.filter(
+            (opportunity) => {
+              const status =
+                String(
+                  opportunity.status || ''
+                )
+                  .trim()
+                  .toLowerCase();
+
+              return status !== 'closed';
+            }
+          );
+
+          setActiveJobs(active.length);
+        }
+      }
+
+      /* ---------------- APPLICATION STATUSES ---------------- */
+
+      const statusesSaved =
+        await AsyncStorage.getItem(
+          APPLICATION_STATUS_KEY
+        );
+
+      if (statusesSaved) {
+        const statuses = JSON.parse(
+          statusesSaved
+        );
+
+        if (
+          statuses &&
+          typeof statuses === 'object' &&
+          !Array.isArray(statuses)
+        ) {
+          const statusValues =
+            Object.values(statuses).filter(
+              (status): status is ApplicationStatus =>
+                typeof status === 'string'
+            );
+
+          if (statusValues.length > 0) {
+            setTotalApplications(
+              statusValues.length
+            );
+
+            setShortlisted(
+              statusValues.filter(
+                (status) =>
+                  status === 'Shortlisted' ||
+                  status === 'Interview'
+              ).length
+            );
+
+            setInterviews(
+              statusValues.filter(
+                (status) =>
+                  status === 'Interview'
+              ).length
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.log(
+        'Error loading dashboard data:',
+        error
+      );
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboardData();
+    }, [])
+  );
+
   const stats = [
     {
       label: 'Active Opportunities',
-      value: '4',
-      icon: '💼',
+      value: activeJobs.toString(),
+      icon: '▣',
     },
     {
       label: 'Total Applications',
-      value: '229',
-      icon: '📋',
+      value: totalApplications.toString(),
+      icon: '▤',
     },
     {
       label: 'Shortlisted',
-      value: '18',
-      icon: '⭐',
+      value: shortlisted.toString(),
+      icon: '☆',
     },
     {
       label: 'Interviews',
-      value: '6',
-      icon: '🗓️',
+      value: interviews.toString(),
+      icon: '□',
     },
   ];
 
+  const openCompanyProfile = () => {
+    router.replace('/business/company-profile');
+  };
+
   return (
-    <ScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.scrollContent}
-    >
-      {/* HEADER */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.companyAvatar}>
-            <Text style={styles.avatarText}>AT</Text>
-          </View>
-
-          <View style={styles.companyInfo}>
-            <Text style={styles.greeting}>
-              Good morning 👋
-            </Text>
-
-            <Text style={styles.companyName}>
-              ABC Technologies
-            </Text>
-          </View>
-
-          {/* HEADER ACTIONS */}
-          <View style={styles.headerActions}>
-            {/* Notifications */}
+    <View style={styles.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={
+          styles.scrollContent
+        }
+      >
+        {/* HEADER */}
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            {/* COMPANY PROFILE */}
             <Pressable
-              style={styles.headerIconButton}
-              onPress={() =>
-                router.push('/business/notifications')
-              }
+              style={styles.profileArea}
+              onPress={openCompanyProfile}
+              android_ripple={{
+                color: '#1E40AF',
+              }}
             >
-              <Text style={styles.headerIcon}>
-                🔔
-              </Text>
-
-              <View style={styles.notificationDot} />
-            </Pressable>
-
-            {/* Company Profile */}
-            <Pressable
-              style={styles.headerIconButton}
-              onPress={() =>
-                router.push('/business/company-profile')
-              }
-            >
-              <Text style={styles.headerIcon}>
-                🏢
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-
-        <Text style={styles.headerTitle}>
-          Business Dashboard
-        </Text>
-
-        <Text style={styles.headerSubtitle}>
-          47 new applications this week.
-        </Text>
-      </View>
-
-      <View style={styles.content}>
-        {/* STATISTICS */}
-        <View style={styles.statsGrid}>
-          {stats.map((stat) => (
-            <View
-              style={styles.statCard}
-              key={stat.label}
-            >
-              <View style={styles.statIcon}>
-                <Text style={styles.statEmoji}>
-                  {stat.icon}
+              <View style={styles.companyAvatar}>
+                <Text style={styles.avatarText}>
+                  {getInitials(companyName)}
                 </Text>
               </View>
 
-              <Text style={styles.statValue}>
-                {stat.value}
+              <View style={styles.companyInfo}>
+                <Text style={styles.greeting}>
+                  Good morning
+                </Text>
+
+                <Text
+                  style={styles.companyName}
+                  numberOfLines={1}
+                >
+                  {companyName}
+                </Text>
+
+                <Text style={styles.profileHint}>
+                  View company profile
+                </Text>
+              </View>
+            </Pressable>
+
+            {/* NOTIFICATIONS */}
+            <Pressable
+              style={styles.notificationButton}
+              onPress={() =>
+                router.push(
+                  '/business/notifications'
+                )
+              }
+              hitSlop={10}
+            >
+              <Text
+                style={styles.notificationIcon}
+              >
+                🔔
               </Text>
 
-              <Text style={styles.statLabel}>
-                {stat.label}
-              </Text>
-            </View>
-          ))}
-        </View>
+              <View
+                style={styles.notificationDot}
+              />
+            </Pressable>
+          </View>
 
-        {/* QUICK ACTIONS */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>
-            Quick Actions
+          <Text style={styles.headerTitle}>
+            Business Dashboard
           </Text>
 
-          <View style={styles.actionsGrid}>
-            {/* Post Opportunity */}
-            <ActionButton
-              icon="➕"
-              title="Post Opportunity"
+          <Text style={styles.headerSubtitle}>
+            Manage opportunities, applications and
+            candidates.
+          </Text>
+        </View>
+
+        <View style={styles.content}>
+          {/* STATISTICS */}
+          <View style={styles.statsGrid}>
+            {stats.map((stat) => (
+              <View
+                style={styles.statCard}
+                key={stat.label}
+              >
+                <View
+                  style={styles.statIcon}
+                >
+                  <Text
+                    style={
+                      styles.statIconText
+                    }
+                  >
+                    {stat.icon}
+                  </Text>
+                </View>
+
+                <Text
+                  style={styles.statValue}
+                >
+                  {stat.value}
+                </Text>
+
+                <Text
+                  style={styles.statLabel}
+                >
+                  {stat.label}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* QUICK ACTIONS */}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>
+              Quick Actions
+            </Text>
+
+            <View
+              style={styles.actionsGrid}
+            >
+              <ActionButton
+                icon="+"
+                title="Post Opportunity"
+                onPress={() =>
+                  router.push(
+                    '/business/post-opportunity'
+                  )
+                }
+              />
+
+              <ActionButton
+                icon="▣"
+                title="Manage Jobs"
+                onPress={() =>
+                  router.push(
+                    '/business/manage-opportunities'
+                  )
+                }
+              />
+
+              <ActionButton
+                icon="○"
+                title="View Candidates"
+                onPress={() =>
+                  router.push(
+                    '/business/candidates'
+                  )
+                }
+              />
+
+              <ActionButton
+                icon="▤"
+                title="Applications"
+                onPress={() =>
+                  router.push(
+                    '/business/applications'
+                  )
+                }
+              />
+            </View>
+          </View>
+
+          {/* RECRUITMENT OVERVIEW */}
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text
+                  style={styles.sectionTitle}
+                >
+                  Recruitment Overview
+                </Text>
+
+                <Text
+                  style={
+                    styles.sectionSubtitle
+                  }
+                >
+                  Track your current hiring activity
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={styles.overviewList}
+            >
+              <OverviewRow
+                label="Active opportunities"
+                value={activeJobs}
+                onPress={() =>
+                  router.push(
+                    '/business/manage-opportunities'
+                  )
+                }
+              />
+
+              <View
+                style={styles.overviewDivider}
+              />
+
+              <OverviewRow
+                label="Applications received"
+                value={totalApplications}
+                onPress={() =>
+                  router.push(
+                    '/business/applications'
+                  )
+                }
+              />
+
+              <View
+                style={styles.overviewDivider}
+              />
+
+              <OverviewRow
+                label="Candidates shortlisted"
+                value={shortlisted}
+                onPress={() =>
+                  router.push(
+                    '/business/applications'
+                  )
+                }
+              />
+
+              <View
+                style={styles.overviewDivider}
+              />
+
+              <OverviewRow
+                label="Candidates in interview"
+                value={interviews}
+                onPress={() =>
+                  router.push(
+                    '/business/applications'
+                  )
+                }
+              />
+            </View>
+          </View>
+
+          {/* RECENT APPLICATIONS */}
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <Text
+                style={styles.sectionTitle}
+              >
+                Recent Applications
+              </Text>
+
+              <Pressable
+                onPress={() =>
+                  router.push(
+                    '/business/applications'
+                  )
+                }
+              >
+                <Text style={styles.seeAll}>
+                  See all
+                </Text>
+              </Pressable>
+            </View>
+
+            <CandidateRow
+              initials="SD"
+              name="Sipho Dlamini"
+              title="Graduate Data Analyst"
+              match="94%"
               onPress={() =>
-                router.push(
-                  '/business/post-opportunity'
-                )
+                router.push({
+                  pathname:
+                    '/business/candidate-profile',
+                  params: {
+                    name: 'Sipho Dlamini',
+                    opportunity:
+                      'Graduate Data Analyst',
+                  },
+                })
               }
             />
 
-            {/* Manage Jobs */}
-            <ActionButton
-              icon="💼"
-              title="Manage Jobs"
+            <CandidateRow
+              initials="NZ"
+              name="Nomvula Zulu"
+              title="Graduate Data Analyst"
+              match="91%"
               onPress={() =>
-                router.push(
-                  '/business/manage-opportunities'
-                )
+                router.push({
+                  pathname:
+                    '/business/candidate-profile',
+                  params: {
+                    name: 'Nomvula Zulu',
+                    opportunity:
+                      'Graduate Data Analyst',
+                  },
+                })
               }
             />
 
-            {/* Candidates */}
-            <ActionButton
-              icon="👥"
-              title="View Candidates"
+            <CandidateRow
+              initials="LK"
+              name="Lethiwe Khumalo"
+              title="Junior Frontend Developer"
+              match="87%"
               onPress={() =>
-                router.push(
-                  '/business/candidates'
-                )
-              }
-            />
-
-            {/* Applications */}
-            <ActionButton
-              icon="📋"
-              title="Applications"
-              onPress={() =>
-                router.push(
-                  '/business/applications'
-                )
+                router.push({
+                  pathname:
+                    '/business/candidate-profile',
+                  params: {
+                    name: 'Lethiwe Khumalo',
+                    opportunity:
+                      'Junior Frontend Developer',
+                  },
+                })
               }
             />
           </View>
-        </View>
 
-        {/* RECENT APPLICATIONS */}
-        <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              Recent Applications
-            </Text>
-
-            <Pressable
-              onPress={() =>
-                router.push(
-                  '/business/applications'
-                )
+          {/* COMPANY PROFILE SHORTCUT */}
+          <View style={styles.profileShortcut}>
+            <View
+              style={
+                styles.profileShortcutIcon
               }
             >
-              <Text style={styles.seeAll}>
-                See all
+              <Text
+                style={
+                  styles.profileShortcutInitials
+                }
+              >
+                {getInitials(companyName)}
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.profileShortcutContent
+              }
+            >
+              <Text
+                style={
+                  styles.profileShortcutTitle
+                }
+              >
+                {companyName}
+              </Text>
+
+              <Text
+                style={
+                  styles.profileShortcutText
+                }
+              >
+                Keep your company information
+                up to date.
+              </Text>
+            </View>
+
+            <Pressable
+              style={
+                styles.profileShortcutButton
+              }
+              onPress={openCompanyProfile}
+            >
+              <Text
+                style={
+                  styles.profileShortcutButtonText
+                }
+              >
+                View
               </Text>
             </Pressable>
           </View>
 
-          <CandidateRow
-            initials="SD"
-            name="Sipho Dlamini"
-            title="Graduate Data Analyst"
-            match="94%"
-          />
-
-          <CandidateRow
-            initials="NZ"
-            name="Nomvula Zulu"
-            title="Graduate Data Analyst"
-            match="91%"
-          />
-
-          <CandidateRow
-            initials="LK"
-            name="Lethiwe Khumalo"
-            title="Junior Frontend Developer"
-            match="87%"
-          />
-        </View>
-
-        {/* AI INSIGHT */}
-        <View style={styles.aiCard}>
-          <Text style={styles.aiTitle}>
-            ✨ AI Hiring Insight
-          </Text>
-
-          <Text style={styles.aiText}>
-            You have 94 unreviewed applications.
-            Sipho Dlamini (94% match) is your top
-            candidate for the Graduate Data Analyst
-            role.
-          </Text>
-
+          {/* LOGOUT */}
           <Pressable
-            style={styles.aiButton}
+            style={styles.logoutButton}
             onPress={() =>
-              router.push('/business/candidates')
+              router.replace('/login')
             }
           >
-            <Text style={styles.aiButtonText}>
-              Review Candidates
+            <Text style={styles.logoutIcon}>
+              ↪
+            </Text>
+
+            <Text style={styles.logoutText}>
+              Logout
             </Text>
           </Pressable>
-        </View>
 
-        {/* LOGOUT */}
+          <View style={styles.bottomSpace} />
+        </View>
+      </ScrollView>
+
+      {/* BOTTOM NAVIGATION */}
+      <View style={styles.bottomNav}>
+        {/* HOME */}
         <Pressable
-          style={styles.logoutButton}
+          style={styles.navItem}
           onPress={() =>
-            router.replace('/login')
+            router.replace(
+              '/business/dashboard'
+            )
           }
         >
-          <Text style={styles.logoutIcon}>
-            🚪
-          </Text>
+          <View
+            style={[
+              styles.navIconContainer,
+              styles.navIconContainerActive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.navIcon,
+                styles.navIconActive,
+              ]}
+            >
+              ⌂
+            </Text>
+          </View>
 
-          <Text style={styles.logoutText}>
-            Logout
+          <Text
+            style={[
+              styles.navLabel,
+              styles.navLabelActive,
+            ]}
+          >
+            Home
+          </Text>
+        </Pressable>
+
+        {/* MESSAGES */}
+        <Pressable
+          style={styles.navItem}
+          onPress={() =>
+            router.replace(
+              '/business/messages'
+            )
+          }
+        >
+          <View
+            style={styles.navIconContainer}
+          >
+            <Text style={styles.navIcon}>
+              ◇
+            </Text>
+          </View>
+
+          <Text style={styles.navLabel}>
+            Messages
+          </Text>
+        </Pressable>
+
+        {/* PROFILE */}
+        <Pressable
+          style={styles.navItem}
+          onPress={openCompanyProfile}
+        >
+          <View
+            style={styles.navIconContainer}
+          >
+            <Text
+              style={styles.profileNavIcon}
+            >
+              {getInitials(companyName)}
+            </Text>
+          </View>
+
+          <Text style={styles.navLabel}>
+            Profile
           </Text>
         </Pressable>
       </View>
-    </ScrollView>
+    </View>
   );
 }
+
+/* ---------------- HELPERS ---------------- */
+
+function getInitials(name: string) {
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return 'AT';
+  }
+
+  if (parts.length === 1) {
+    return parts[0]
+      .slice(0, 2)
+      .toUpperCase();
+  }
+
+  return `${parts[0][0]}${parts[1][0]}`
+    .toUpperCase();
+}
+
+/* ---------------- ACTION BUTTON ---------------- */
 
 function ActionButton({
   icon,
@@ -273,9 +685,13 @@ function ActionButton({
       style={styles.actionButton}
       onPress={onPress}
     >
-      <Text style={styles.actionIcon}>
-        {icon}
-      </Text>
+      <View
+        style={styles.actionIconContainer}
+      >
+        <Text style={styles.actionIcon}>
+          {icon}
+        </Text>
+      </View>
 
       <Text style={styles.actionText}>
         {title}
@@ -284,31 +700,91 @@ function ActionButton({
   );
 }
 
+/* ---------------- OVERVIEW ROW ---------------- */
+
+function OverviewRow({
+  label,
+  value,
+  onPress,
+}: {
+  label: string;
+  value: number;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={styles.overviewRow}
+      onPress={onPress}
+    >
+      <Text
+        style={styles.overviewLabel}
+      >
+        {label}
+      </Text>
+
+      <View
+        style={styles.overviewRight}
+      >
+        <Text
+          style={styles.overviewValue}
+        >
+          {value}
+        </Text>
+
+        <Text
+          style={styles.overviewArrow}
+        >
+          ›
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/* ---------------- CANDIDATE ROW ---------------- */
+
 function CandidateRow({
   initials,
   name,
   title,
   match,
+  onPress,
 }: {
   initials: string;
   name: string;
   title: string;
   match: string;
+  onPress: () => void;
 }) {
   return (
-    <View style={styles.candidateRow}>
-      <View style={styles.candidateAvatar}>
-        <Text style={styles.avatarText}>
+    <Pressable
+      style={styles.candidateRow}
+      onPress={onPress}
+    >
+      <View
+        style={styles.candidateAvatar}
+      >
+        <Text
+          style={
+            styles.candidateAvatarText
+          }
+        >
           {initials}
         </Text>
       </View>
 
-      <View style={styles.candidateInfo}>
-        <Text style={styles.candidateName}>
+      <View
+        style={styles.candidateInfo}
+      >
+        <Text
+          style={styles.candidateName}
+        >
           {name}
         </Text>
 
-        <Text style={styles.candidateTitle}>
+        <Text
+          style={styles.candidateTitle}
+        >
           {title}
         </Text>
       </View>
@@ -316,9 +792,17 @@ function CandidateRow({
       <Text style={styles.match}>
         {match}
       </Text>
-    </View>
+
+      <Text
+        style={styles.candidateArrow}
+      >
+        ›
+      </Text>
+    </Pressable>
   );
 }
+
+/* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
   container: {
@@ -327,11 +811,13 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingBottom: 35,
+    paddingBottom: 25,
   },
 
+  /* HEADER */
+
   header: {
-    backgroundColor: '#0D1B3E',
+    backgroundColor: '#0B1F3A',
     paddingTop: 55,
     paddingHorizontal: 20,
     paddingBottom: 30,
@@ -342,18 +828,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
+  profileArea: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingRight: 14,
+    borderRadius: 14,
+    minHeight: 62,
+    overflow: 'hidden',
+  },
+
   companyAvatar: {
-    width: 45,
-    height: 45,
-    borderRadius: 12,
-    backgroundColor: '#6366F1',
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: '#2563EB',
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   avatarText: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
+    fontWeight: '800',
+    fontSize: 13,
   },
 
   companyInfo: {
@@ -362,63 +860,71 @@ const styles = StyleSheet.create({
   },
 
   greeting: {
-    color: '#C7D2FE',
+    color: '#CBD5E1',
     fontSize: 12,
   },
 
   companyName: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 14,
     marginTop: 2,
   },
 
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
+  profileHint: {
+    color: '#93C5FD',
+    fontSize: 10,
+    marginTop: 3,
+    fontWeight: '600',
   },
 
-  headerIconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1E293B',
+  /* NOTIFICATIONS */
+
+  notificationButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#172B4D',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
 
-  headerIcon: {
-    fontSize: 19,
+  notificationIcon: {
+    fontSize: 21,
   },
 
   notificationDot: {
     position: 'absolute',
-    right: 6,
-    top: 6,
-    width: 7,
-    height: 7,
-    borderRadius: 5,
-    backgroundColor: '#FB7185',
+    right: 7,
+    top: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
   },
 
   headerTitle: {
     color: '#FFFFFF',
     fontSize: 25,
-    fontWeight: 'bold',
+    fontWeight: '800',
     marginTop: 25,
   },
 
   headerSubtitle: {
-    color: '#A5B4FC',
+    color: '#BFDBFE',
     fontSize: 14,
-    marginTop: 5,
+    marginTop: 6,
   },
+
+  /* CONTENT */
 
   content: {
     padding: 20,
     marginTop: -10,
   },
+
+  /* STATISTICS */
 
   statsGrid: {
     flexDirection: 'row',
@@ -429,78 +935,110 @@ const styles = StyleSheet.create({
   statCard: {
     width: '48%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 15,
+    borderRadius: 17,
+    padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
 
   statIcon: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
   },
 
-  statEmoji: {
-    fontSize: 22,
+  statIconText: {
+    fontSize: 20,
+    color: '#2563EB',
+    fontWeight: '800',
   },
 
   statValue: {
     fontSize: 25,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#0F172A',
   },
 
   statLabel: {
     fontSize: 12,
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 3,
   },
+
+  /* GENERAL CARD */
 
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: 17,
+    padding: 17,
     marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
 
   sectionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#0F172A',
-    marginBottom: 12,
+    marginBottom: 4,
   },
+
+  sectionSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+
+  /* QUICK ACTIONS */
 
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    marginTop: 9,
   },
 
   actionButton: {
     width: '48%',
     backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 8,
+    borderRadius: 13,
+    padding: 13,
+    marginBottom: 9,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
 
-  actionIcon: {
-    fontSize: 20,
+  actionIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 8,
   },
 
+  actionIcon: {
+    fontSize: 17,
+    color: '#2563EB',
+    fontWeight: '800',
+  },
+
   actionText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#334155',
-    fontWeight: '600',
+    fontWeight: '700',
     flex: 1,
   },
+
+  /* RECRUITMENT OVERVIEW */
 
   sectionHeader: {
     flexDirection: 'row',
@@ -508,9 +1046,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  seeAll: {
-    color: '#4F46E5',
+  overviewList: {
+    marginTop: 9,
+  },
+
+  overviewRow: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  overviewLabel: {
+    fontSize: 13,
+    color: '#475569',
     fontWeight: '600',
+  },
+
+  overviewRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  overviewValue: {
+    fontSize: 16,
+    color: '#0B1F3A',
+    fontWeight: '800',
+  },
+
+  overviewArrow: {
+    fontSize: 22,
+    color: '#94A3B8',
+    marginLeft: 8,
+    marginTop: -2,
+  },
+
+  overviewDivider: {
+    height: 1,
+    backgroundColor: '#E2E8F0',
+  },
+
+  /* RECENT APPLICATIONS */
+
+  seeAll: {
+    color: '#2563EB',
+    fontWeight: '700',
     fontSize: 13,
   },
 
@@ -518,16 +1098,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 14,
+    paddingVertical: 2,
   },
 
   candidateAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#0B1F3A',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
+  },
+
+  candidateAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
   },
 
   candidateInfo: {
@@ -535,7 +1122,7 @@ const styles = StyleSheet.create({
   },
 
   candidateName: {
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#0F172A',
     fontSize: 14,
   },
@@ -547,49 +1134,81 @@ const styles = StyleSheet.create({
   },
 
   match: {
-    color: '#059669',
+    color: '#047857',
     backgroundColor: '#ECFDF5',
     paddingHorizontal: 8,
     paddingVertical: 5,
-    borderRadius: 10,
+    borderRadius: 9,
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    marginRight: 6,
   },
 
-  aiCard: {
-    backgroundColor: '#4338CA',
-    borderRadius: 18,
-    padding: 18,
+  candidateArrow: {
+    color: '#94A3B8',
+    fontSize: 22,
+  },
+
+  /* PROFILE SHORTCUT */
+
+  profileShortcut: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 15,
     marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 
-  aiTitle: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-
-  aiText: {
-    color: '#C7D2FE',
-    fontSize: 13,
-    lineHeight: 20,
-  },
-
-  aiButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#6366F1',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+  profileShortcutIcon: {
+    width: 42,
+    height: 42,
     borderRadius: 12,
-    marginTop: 12,
+    backgroundColor: '#0B1F3A',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
-  aiButtonText: {
+  profileShortcutInitials: {
     color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '800',
   },
+
+  profileShortcutContent: {
+    flex: 1,
+    marginLeft: 11,
+    marginRight: 8,
+  },
+
+  profileShortcutTitle: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+
+  profileShortcutText: {
+    color: '#64748B',
+    fontSize: 11,
+    marginTop: 3,
+  },
+
+  profileShortcutButton: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 9,
+  },
+
+  profileShortcutButtonText: {
+    color: '#2563EB',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  /* LOGOUT */
 
   logoutButton: {
     height: 50,
@@ -606,11 +1225,82 @@ const styles = StyleSheet.create({
   logoutIcon: {
     fontSize: 17,
     marginRight: 7,
+    color: '#0B1F3A',
   },
 
   logoutText: {
-    color: '#0D1B3E',
+    color: '#0B1F3A',
     fontSize: 15,
     fontWeight: '700',
+  },
+
+  bottomSpace: {
+    height: 90,
+  },
+
+  /* BOTTOM NAVIGATION */
+
+  bottomNav: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 78,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 5,
+    paddingBottom: 4,
+  },
+
+  navItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 72,
+  },
+
+  navIconContainer: {
+    width: 40,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  navIconContainerActive: {
+    backgroundColor: '#EFF6FF',
+  },
+
+  navIcon: {
+    fontSize: 20,
+    color: '#64748B',
+    fontWeight: '700',
+  },
+
+  navIconActive: {
+    color: '#2563EB',
+  },
+
+  profileNavIcon: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '900',
+  },
+
+  navLabel: {
+    fontSize: 9,
+    color: '#64748B',
+    fontWeight: '600',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+
+  navLabelActive: {
+    color: '#2563EB',
+    fontWeight: '800',
   },
 });

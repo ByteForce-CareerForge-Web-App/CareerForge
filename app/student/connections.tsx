@@ -62,6 +62,10 @@ export default function ConnectionsScreen() {
   const [connections, setConnections] = useState<Person[]>([]);
   const [search, setSearch] = useState('');
 
+  // Selected person for LinkedIn-style profile view
+  const [selectedPerson, setSelectedPerson] =
+    useState<Person | null>(null);
+
   useFocusEffect(
     useCallback(() => {
       loadConnections();
@@ -73,7 +77,8 @@ export default function ConnectionsScreen() {
       const storedPeople = await AsyncStorage.getItem(PEOPLE_KEY);
       const storedRequests = await AsyncStorage.getItem(REQUESTS_KEY);
       const storedSent = await AsyncStorage.getItem(SENT_KEY);
-      const storedConnections = await AsyncStorage.getItem(CONNECTIONS_KEY);
+      const storedConnections =
+        await AsyncStorage.getItem(CONNECTIONS_KEY);
 
       if (storedPeople) {
         setPeople(JSON.parse(storedPeople));
@@ -89,7 +94,9 @@ export default function ConnectionsScreen() {
       } else {
         // Give the demo one incoming request
         const initialRequest = [defaultPeople[3]];
+
         setRequests(initialRequest);
+
         await AsyncStorage.setItem(
           REQUESTS_KEY,
           JSON.stringify(initialRequest)
@@ -199,11 +206,311 @@ export default function ConnectionsScreen() {
       !requests.some(request => request.id === person.id)
   );
 
+  /*
+   * ==========================================================
+   * LINKEDIN-STYLE PROFILE VIEW
+   * ==========================================================
+   */
+
+  if (selectedPerson) {
+    const person = selectedPerson;
+
+    const isAlumni = person.role
+      .toLowerCase()
+      .includes('alumni');
+
+    return (
+      <View style={styles.container}>
+
+        {/* Profile Header */}
+        <View style={styles.header}>
+          <Pressable
+            onPress={() => setSelectedPerson(null)}
+            style={styles.backButton}
+          >
+            <Text style={styles.backText}>‹</Text>
+          </Pressable>
+
+          <View>
+            <Text style={styles.headerTitle}>
+              Profile
+            </Text>
+
+            <Text style={styles.headerSubtitle}>
+              Professional profile
+            </Text>
+          </View>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+
+          {/* Profile Hero */}
+          <View style={styles.profileHero}>
+            <View style={styles.profileAvatar}>
+              <Text style={styles.profileAvatarText}>
+                {person.initials}
+              </Text>
+            </View>
+
+            <Text style={styles.profileName}>
+              {person.name}
+            </Text>
+
+            <Text style={styles.profileRole}>
+              {person.programme}
+            </Text>
+
+            <Text style={styles.profileType}>
+              {person.role}
+            </Text>
+
+            <View style={styles.memberBadge}>
+              <Text style={styles.memberBadgeText}>
+                {isAlumni
+                  ? 'CareerForgeAI Alumni'
+                  : 'CareerForgeAI Student'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Profile Actions */}
+          <View style={styles.profileActions}>
+
+            <Pressable
+              style={styles.profileMessageButton}
+              onPress={() =>
+                router.push({
+                  pathname: '/student/chat',
+                  params: {
+                    conversationId: person.id,
+                    name: person.name,
+                    role: `${person.role} • ${person.programme}`,
+                    initials: person.initials,
+                    online: 'true',
+                  },
+                })
+              }
+            >
+              <Text style={styles.profileMessageText}>
+                Message
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.profileBackButton}
+              onPress={() => setSelectedPerson(null)}
+            >
+              <Text style={styles.profileBackText}>
+                Back to Network
+              </Text>
+            </Pressable>
+
+          </View>
+
+          {/* About */}
+          <View style={styles.profileSection}>
+            <Text style={styles.profileSectionTitle}>
+              About
+            </Text>
+
+            <View style={styles.profileCard}>
+              <Text style={styles.profileBodyText}>
+                {person.name} is part of the CareerForgeAI
+                professional network. Their profile helps
+                students and alumni discover professional
+                interests, career paths and networking
+                opportunities.
+              </Text>
+            </View>
+          </View>
+
+          {/* Professional Information */}
+          <View style={styles.profileSection}>
+            <Text style={styles.profileSectionTitle}>
+              Professional Information
+            </Text>
+
+            <View style={styles.profileCard}>
+
+              <View style={styles.profileInfoRow}>
+                <View style={styles.profileInfoIcon}>
+                  <Text style={styles.profileInfoIconText}>
+                    R
+                  </Text>
+                </View>
+
+                <View style={styles.profileInfoContent}>
+                  <Text style={styles.profileInfoLabel}>
+                    Role
+                  </Text>
+
+                  <Text style={styles.profileInfoValue}>
+                    {person.role}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.profileDivider} />
+
+              <View style={styles.profileInfoRow}>
+                <View style={styles.profileInfoIcon}>
+                  <Text style={styles.profileInfoIconText}>
+                    C
+                  </Text>
+                </View>
+
+                <View style={styles.profileInfoContent}>
+                  <Text style={styles.profileInfoLabel}>
+                    Profession / Programme
+                  </Text>
+
+                  <Text style={styles.profileInfoValue}>
+                    {person.programme}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.profileDivider} />
+
+              <View style={styles.profileInfoRow}>
+                <View style={styles.profileInfoIcon}>
+                  <Text style={styles.profileInfoIconText}>
+                    N
+                  </Text>
+                </View>
+
+                <View style={styles.profileInfoContent}>
+                  <Text style={styles.profileInfoLabel}>
+                    Network
+                  </Text>
+
+                  <Text style={styles.profileInfoValue}>
+                    CareerForgeAI
+                  </Text>
+                </View>
+              </View>
+
+            </View>
+          </View>
+
+          {/* Skills */}
+          <View style={styles.profileSection}>
+            <Text style={styles.profileSectionTitle}>
+              Skills
+            </Text>
+
+            <View style={styles.profileCard}>
+              <View style={styles.skillsContainer}>
+
+                <View style={styles.skill}>
+                  <Text style={styles.skillText}>
+                    Communication
+                  </Text>
+                </View>
+
+                <View style={styles.skill}>
+                  <Text style={styles.skillText}>
+                    Problem Solving
+                  </Text>
+                </View>
+
+                <View style={styles.skill}>
+                  <Text style={styles.skillText}>
+                    Technology
+                  </Text>
+                </View>
+
+                <View style={styles.skill}>
+                  <Text style={styles.skillText}>
+                    Professional Development
+                  </Text>
+                </View>
+
+              </View>
+            </View>
+          </View>
+
+          {/* Experience */}
+          <View style={styles.profileSection}>
+            <Text style={styles.profileSectionTitle}>
+              Experience
+            </Text>
+
+            <View style={styles.profileCard}>
+
+              <View style={styles.experienceHeader}>
+
+                <View style={styles.experienceIcon}>
+                  <Text style={styles.experienceIconText}>
+                    CF
+                  </Text>
+                </View>
+
+                <View style={styles.experienceContent}>
+                  <Text style={styles.experienceTitle}>
+                    CareerForgeAI Member
+                  </Text>
+
+                  <Text style={styles.experienceSubtitle}>
+                    Professional Network
+                  </Text>
+                </View>
+
+              </View>
+
+              <Text style={styles.profileBodyText}>
+                Developing professional connections,
+                exploring career opportunities and
+                building employability through the
+                CareerForgeAI platform.
+              </Text>
+
+            </View>
+          </View>
+
+          {/* Networking */}
+          <View style={styles.profileSection}>
+            <Text style={styles.profileSectionTitle}>
+              Networking
+            </Text>
+
+            <View style={styles.networkingCard}>
+              <Text style={styles.networkingTitle}>
+                Connected on CareerForgeAI
+              </Text>
+
+              <Text style={styles.networkingText}>
+                You are connected with {person.name}.
+                You can now message them and build your
+                professional network.
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.footer}>
+            CareerForgeAI Professional Network
+          </Text>
+
+        </ScrollView>
+      </View>
+    );
+  }
+
+  /*
+   * ==========================================================
+   * CONNECTIONS LIST
+   * ==========================================================
+   */
+
   return (
     <View style={styles.container}>
 
       {/* Header */}
       <View style={styles.header}>
+
         <Pressable
           onPress={() => router.back()}
           style={styles.backButton}
@@ -212,11 +519,15 @@ export default function ConnectionsScreen() {
         </Pressable>
 
         <View>
-          <Text style={styles.headerTitle}>Connections</Text>
+          <Text style={styles.headerTitle}>
+            Connections
+          </Text>
+
           <Text style={styles.headerSubtitle}>
             Build your professional network
           </Text>
         </View>
+
       </View>
 
       <ScrollView
@@ -226,7 +537,10 @@ export default function ConnectionsScreen() {
 
         {/* Search */}
         <View style={styles.searchContainer}>
-          <Text style={styles.searchIcon}>🔎</Text>
+
+          <Text style={styles.searchIcon}>
+            🔎
+          </Text>
 
           <TextInput
             value={search}
@@ -235,12 +549,15 @@ export default function ConnectionsScreen() {
             placeholderTextColor="#94A3B8"
             style={styles.searchInput}
           />
+
         </View>
 
         {/* Connection Requests */}
         {requests.length > 0 && (
           <View style={styles.section}>
+
             <View style={styles.sectionHeader}>
+
               <Text style={styles.sectionTitle}>
                 Connection Requests
               </Text>
@@ -250,10 +567,14 @@ export default function ConnectionsScreen() {
                   {requests.length}
                 </Text>
               </View>
+
             </View>
 
             {requests.map(person => (
-              <View key={person.id} style={styles.card}>
+              <View
+                key={person.id}
+                style={styles.card}
+              >
 
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>
@@ -262,6 +583,7 @@ export default function ConnectionsScreen() {
                 </View>
 
                 <View style={styles.personInfo}>
+
                   <Text style={styles.personName}>
                     {person.name}
                   </Text>
@@ -271,53 +593,87 @@ export default function ConnectionsScreen() {
                   </Text>
 
                   <View style={styles.requestButtons}>
+
+                    {/* View Profile */}
+                    <Pressable
+                      style={styles.requestProfileButton}
+                      onPress={() =>
+                        setSelectedPerson(person)
+                      }
+                    >
+                      <Text style={styles.requestProfileText}>
+                        View Profile
+                      </Text>
+                    </Pressable>
+
+                    {/* Accept */}
                     <Pressable
                       style={styles.acceptButton}
-                      onPress={() => acceptRequest(person)}
+                      onPress={() =>
+                        acceptRequest(person)
+                      }
                     >
                       <Text style={styles.acceptText}>
                         Accept
                       </Text>
                     </Pressable>
 
+                    {/* Decline */}
                     <Pressable
                       style={styles.declineButton}
-                      onPress={() => declineRequest(person)}
+                      onPress={() =>
+                        declineRequest(person)
+                      }
                     >
                       <Text style={styles.declineText}>
                         Decline
                       </Text>
                     </Pressable>
+
                   </View>
+
                 </View>
 
               </View>
             ))}
+
           </View>
         )}
 
         {/* People You May Know */}
         <View style={styles.section}>
+
           <Text style={styles.sectionTitle}>
             People You May Know
           </Text>
 
           {availablePeople.length === 0 ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyIcon}>👥</Text>
+
+              <Text style={styles.emptyIcon}>
+                👥
+              </Text>
+
               <Text style={styles.emptyTitle}>
                 No new people found
               </Text>
+
               <Text style={styles.emptyText}>
                 Try another search or check back later.
               </Text>
+
             </View>
           ) : (
             availablePeople.map(person => {
-              const pending = sentRequests.includes(person.id);
+
+              const pending =
+                sentRequests.includes(person.id);
 
               return (
-                <View key={person.id} style={styles.card}>
+                <View
+                  key={person.id}
+                  style={styles.card}
+                >
 
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>
@@ -326,6 +682,7 @@ export default function ConnectionsScreen() {
                   </View>
 
                   <View style={styles.personInfo}>
+
                     <Text style={styles.personName}>
                       {person.name}
                     </Text>
@@ -338,128 +695,39 @@ export default function ConnectionsScreen() {
                       {person.programme}
                     </Text>
 
-                    <Pressable
-                      disabled={pending}
-                      onPress={() => sendRequest(person)}
-                      style={[
-                        styles.connectButton,
-                        pending && styles.pendingButton,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.connectText,
-                          pending && styles.pendingText,
-                        ]}
+                    <View style={styles.peopleActions}>
+                      <Pressable
+                        style={styles.peopleProfileButton}
+                        onPress={() => setSelectedPerson(person)}
                       >
-                        {pending ? 'Request Sent' : '+ Connect'}
-                      </Text>
-                    </Pressable>
-                  </View>
+                        <Text style={styles.peopleProfileText}>
+                          View Profile
+                        </Text>
+                      </Pressable>
 
+                      <Pressable
+                        style={[
+                          styles.connectButton,
+                          pending && styles.pendingButton,
+                        ]}
+                        onPress={() => sendRequest(person)}
+                        disabled={pending}
+                      >
+                        <Text
+                          style={[
+                            styles.connectText,
+                            pending && styles.pendingText,
+                          ]}
+                        >
+                          {pending ? 'Pending' : 'Connect'}
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                  </View>
                 </View>
               );
             })
-          )}
-        </View>
-
-        {/* My Connections */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              My Connections
-            </Text>
-
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>
-                {connections.length}
-              </Text>
-            </View>
-          </View>
-
-          {connections.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyIcon}>🤝</Text>
-
-              <Text style={styles.emptyTitle}>
-                No connections yet
-              </Text>
-
-              <Text style={styles.emptyText}>
-                Start connecting with students and alumni
-                to grow your professional network.
-              </Text>
-            </View>
-          ) : (
-            connections.map(person => (
-  <View
-    key={person.id}
-    style={styles.connectionCard}
-  >
-    {/* Avatar */}
-    <View style={styles.avatar}>
-      <Text style={styles.avatarText}>
-        {person.initials}
-      </Text>
-    </View>
-
-    {/* Person information + actions */}
-    <View style={styles.personInfo}>
-      <Text style={styles.personName}>
-        {person.name}
-      </Text>
-
-      <Text style={styles.personRole}>
-        {person.role}
-      </Text>
-
-      <Text style={styles.programme}>
-        {person.programme}
-      </Text>
-
-      {/* Connection Actions */}
-      <View style={styles.connectionActions}>
-
-        {/* View Profile */}
-        <Pressable
-          style={styles.viewProfileButton}
-          onPress={() =>
-            Alert.alert(
-              'Profile',
-              `${person.name}\n\n${person.role} • ${person.programme}`
-            )
-          }
-        >
-          <Text style={styles.viewProfileText}>
-            View Profile
-          </Text>
-        </Pressable>
-
-        {/* Message */}
-        <Pressable
-          style={styles.messageButton}
-          onPress={() =>
-            router.push({
-              pathname: '/student/chat',
-              params: {
-                conversationId: person.id,
-                name: person.name,
-                role: `${person.role} • ${person.programme}`,
-                initials: person.initials,
-                online: 'true',
-              },
-            })
-          }
-        >
-          <Text style={styles.messageText}>
-            💬 Message
-          </Text>
-        </Pressable>
-
-      </View>
-    </View>
-  </View>
-))
           )}
         </View>
 
@@ -652,6 +920,29 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
+  /* People You May Know buttons */
+  peopleActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+
+  peopleProfileButton: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: '#D9E1EA',
+    marginRight: 8,
+  },
+
+  peopleProfileText: {
+    color: '#0B1F3A',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
   connectButton: {
     alignSelf: 'flex-start',
     backgroundColor: '#0B1F3A',
@@ -674,10 +965,29 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
 
+  /* Connection Request buttons */
   requestButtons: {
     flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 7,
-    gap: 8,
+    flexWrap: 'wrap',
+  },
+
+  requestProfileButton: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D9E1EA',
+    marginRight: 8,
+    marginBottom: 4,
+  },
+
+  requestProfileText: {
+    color: '#0B1F3A',
+    fontSize: 12,
+    fontWeight: '700',
   },
 
   acceptButton: {
@@ -685,6 +995,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 8,
+    marginRight: 8,
+    marginBottom: 4,
   },
 
   acceptText: {
@@ -698,6 +1010,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 8,
+    marginBottom: 4,
   },
 
   declineText: {
@@ -747,11 +1060,11 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
 
-    connectionActions: {
+  /* My Connections buttons */
+  connectionActions: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 10,
-    gap: 8,
   },
 
   viewProfileButton: {
@@ -761,6 +1074,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#D9E1EA',
+    marginRight: 8,
   },
 
   viewProfileText: {
@@ -780,5 +1094,265 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
+  },
+
+  /*
+   * ==========================================================
+   * PROFILE VIEW STYLES
+   * ==========================================================
+   */
+
+  profileHero: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 25,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 16,
+  },
+
+  profileAvatar: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    backgroundColor: '#DCE7F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 15,
+  },
+
+  profileAvatarText: {
+    color: '#1E4B7A',
+    fontSize: 28,
+    fontWeight: '800',
+  },
+
+  profileName: {
+    color: '#0B1F3A',
+    fontSize: 24,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+
+  profileRole: {
+    color: '#334155',
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+
+  profileType: {
+    color: '#64748B',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 13,
+  },
+
+  memberBadge: {
+    backgroundColor: '#E8F0F8',
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+
+  memberBadgeText: {
+    color: '#1E4B7A',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  profileActions: {
+    flexDirection: 'row',
+    marginBottom: 25,
+  },
+
+  profileMessageButton: {
+    flex: 1,
+    backgroundColor: '#0B1F3A',
+    borderRadius: 11,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginRight: 10,
+  },
+
+  profileMessageText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  profileBackButton: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 11,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  profileBackText: {
+    color: '#0B1F3A',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  profileSection: {
+    marginBottom: 22,
+  },
+
+  profileSectionTitle: {
+    color: '#0B1F3A',
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 10,
+  },
+
+  profileCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 17,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+
+  profileBodyText: {
+    color: '#64748B',
+    fontSize: 13,
+    lineHeight: 20,
+  },
+
+  profileInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  profileInfoIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#E8F0F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+
+  profileInfoIconText: {
+    color: '#1E4B7A',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+
+  profileInfoContent: {
+    flex: 1,
+  },
+
+  profileInfoLabel: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 3,
+  },
+
+  profileInfoValue: {
+    color: '#0B1F3A',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  profileDivider: {
+    height: 1,
+    backgroundColor: '#E2E8F0',
+    marginVertical: 15,
+  },
+
+  skillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+
+  skill: {
+    backgroundColor: '#EEF4FA',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+
+  skillText: {
+    color: '#1E4B7A',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  experienceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+
+  experienceIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#E8F0F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+
+  experienceIconText: {
+    color: '#1E4B7A',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  experienceContent: {
+    flex: 1,
+  },
+
+  experienceTitle: {
+    color: '#0B1F3A',
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+
+  experienceSubtitle: {
+    color: '#64748B',
+    fontSize: 12,
+  },
+
+  networkingCard: {
+    backgroundColor: '#EAF2F9',
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#D5E3EF',
+  },
+
+  networkingTitle: {
+    color: '#0B1F3A',
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+
+  networkingText: {
+    color: '#475569',
+    fontSize: 13,
+    lineHeight: 19,
+  },
+
+  footer: {
+    textAlign: 'center',
+    color: '#94A3B8',
+    fontSize: 11,
+    marginTop: 5,
+    marginBottom: 10,
   },
 });

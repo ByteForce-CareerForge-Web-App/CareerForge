@@ -11,6 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const APPLICATION_STATUS_KEY =
@@ -214,6 +215,7 @@ export default function CandidatesScreen() {
       return {
         backgroundColor: '#DCFCE7',
         color: '#166534',
+        icon: 'checkmark-circle',
       };
     }
 
@@ -221,6 +223,7 @@ export default function CandidatesScreen() {
       return {
         backgroundColor: '#FEE2E2',
         color: '#991B1B',
+        icon: 'close-circle',
       };
     }
 
@@ -228,18 +231,20 @@ export default function CandidatesScreen() {
       return {
         backgroundColor: '#DBEAFE',
         color: '#1D4ED8',
+        icon: 'calendar',
       };
     }
 
     return {
       backgroundColor: '#FEF3C7',
       color: '#92400E',
+      icon: 'time',
     };
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* HEADER */}
       <View style={styles.header}>
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>
@@ -264,8 +269,14 @@ export default function CandidatesScreen() {
             }
           }}
         >
+          <Ionicons
+            name="arrow-back"
+            size={17}
+            color="#334155"
+          />
+
           <Text style={styles.backText}>
-            ← Back
+            Back
           </Text>
         </Pressable>
       </View>
@@ -274,46 +285,36 @@ export default function CandidatesScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Stats */}
+        {/* STATS */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>
-              {totalCandidates}
-            </Text>
+          <StatCard
+            icon="people-outline"
+            number={totalCandidates}
+            label="Total Candidates"
+          />
 
-            <Text style={styles.statLabel}>
-              Total Candidates
-            </Text>
-          </View>
+          <StatCard
+            icon="checkmark-circle-outline"
+            number={shortlistedCount}
+            label="Shortlisted"
+          />
 
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>
-              {shortlistedCount}
-            </Text>
-
-            <Text style={styles.statLabel}>
-              Shortlisted
-            </Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>
-              {interviewCount}
-            </Text>
-
-            <Text style={styles.statLabel}>
-              Interviews
-            </Text>
-          </View>
+          <StatCard
+            icon="calendar-outline"
+            number={interviewCount}
+            label="Interviews"
+          />
         </View>
 
-        {/* Search */}
+        {/* SEARCH */}
         <View
           style={styles.searchContainer}
         >
-          <Text style={styles.searchIcon}>
-            🔍
-          </Text>
+          <Ionicons
+            name="search-outline"
+            size={19}
+            color="#64748B"
+          />
 
           <TextInput
             style={styles.searchInput}
@@ -321,10 +322,12 @@ export default function CandidatesScreen() {
             placeholderTextColor="#94A3B8"
             value={search}
             onChangeText={setSearch}
+            returnKeyType="search"
+            blurOnSubmit
           />
         </View>
 
-        {/* Filters */}
+        {/* FILTERS */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -333,49 +336,77 @@ export default function CandidatesScreen() {
             styles.filterContainer
           }
         >
-          {filters.map((filter) => (
-            <Pressable
-              key={filter}
-              style={
-                selectedFilter === filter
-                  ? styles.filterActive
-                  : styles.filterButton
-              }
-              onPress={() =>
-                setSelectedFilter(filter)
-              }
-            >
-              <Text
+          {filters.map((filter) => {
+            const isActive =
+              selectedFilter === filter;
+
+            return (
+              <Pressable
+                key={filter}
                 style={
-                  selectedFilter === filter
-                    ? styles.filterActiveText
-                    : styles.filterText
+                  isActive
+                    ? styles.filterActive
+                    : styles.filterButton
+                }
+                onPress={() =>
+                  setSelectedFilter(filter)
                 }
               >
-                {filter}
-              </Text>
-            </Pressable>
-          ))}
+                {isActive && (
+                  <Ionicons
+                    name="checkmark"
+                    size={14}
+                    color="#FFFFFF"
+                    style={
+                      styles.filterCheck
+                    }
+                  />
+                )}
+
+                <Text
+                  style={
+                    isActive
+                      ? styles.filterActiveText
+                      : styles.filterText
+                  }
+                >
+                  {filter}
+                </Text>
+              </Pressable>
+            );
+          })}
         </ScrollView>
 
-        {/* Results Header */}
+        {/* RESULTS HEADER */}
         <View style={styles.resultsHeader}>
           <Text style={styles.sectionTitle}>
             Candidate Pool
           </Text>
 
-          <Text style={styles.resultCount}>
-            {filteredCandidates.length} shown
-          </Text>
+          <View style={styles.resultBadge}>
+            <Text style={styles.resultBadgeText}>
+              {filteredCandidates.length}
+            </Text>
+
+            <Text style={styles.resultBadgeLabel}>
+              shown
+            </Text>
+          </View>
         </View>
 
-        {/* Candidates */}
+        {/* CANDIDATES */}
         {filteredCandidates.length ===
         0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>
-              🔎
-            </Text>
+            <View
+              style={styles.emptyIconContainer}
+            >
+              <Ionicons
+                name="search-outline"
+                size={34}
+                color="#64748B"
+              />
+            </View>
 
             <Text
               style={styles.emptyTitle}
@@ -408,7 +439,7 @@ export default function CandidatesScreen() {
                     styles.candidateCard
                   }
                 >
-                  {/* Candidate */}
+                  {/* CANDIDATE */}
                   <View
                     style={styles.topRow}
                   >
@@ -463,6 +494,16 @@ export default function CandidatesScreen() {
                         },
                       ]}
                     >
+                      <Ionicons
+                        name={
+                          statusStyle.icon as any
+                        }
+                        size={12}
+                        color={
+                          statusStyle.color
+                        }
+                      />
+
                       <Text
                         style={[
                           styles.statusText,
@@ -477,7 +518,7 @@ export default function CandidatesScreen() {
                     </View>
                   </View>
 
-                  {/* AI Match */}
+                  {/* AI MATCH */}
                   <View
                     style={
                       styles.matchContainer
@@ -488,13 +529,31 @@ export default function CandidatesScreen() {
                         styles.matchHeader
                       }
                     >
-                      <Text
+                      <View
                         style={
-                          styles.matchLabel
+                          styles.matchLabelContainer
                         }
                       >
-                        🤖 AI Match Score
-                      </Text>
+                        <View
+                          style={
+                            styles.aiIconContainer
+                          }
+                        >
+                          <Ionicons
+                            name="sparkles-outline"
+                            size={14}
+                            color="#2563EB"
+                          />
+                        </View>
+
+                        <Text
+                          style={
+                            styles.matchLabel
+                          }
+                        >
+                          AI Match Score
+                        </Text>
+                      </View>
 
                       <Text
                         style={
@@ -520,17 +579,29 @@ export default function CandidatesScreen() {
                       />
                     </View>
 
-                    <Text
+                    <View
                       style={
-                        styles.opportunityText
+                        styles.opportunityRow
                       }
                     >
-                      Best match for:{' '}
-                      {candidate.opportunity}
-                    </Text>
+                      <Ionicons
+                        name="briefcase-outline"
+                        size={13}
+                        color="#64748B"
+                      />
+
+                      <Text
+                        style={
+                          styles.opportunityText
+                        }
+                      >
+                        Best match for:{' '}
+                        {candidate.opportunity}
+                      </Text>
+                    </View>
                   </View>
 
-                  {/* Actions */}
+                  {/* ACTIONS */}
                   <View
                     style={styles.actionRow}
                   >
@@ -551,6 +622,12 @@ export default function CandidatesScreen() {
                         })
                       }
                     >
+                      <Ionicons
+                        name="person-outline"
+                        size={15}
+                        color="#FFFFFF"
+                      />
+
                       <Text
                         style={
                           styles.viewButtonText
@@ -575,6 +652,12 @@ export default function CandidatesScreen() {
                         })
                       }
                     >
+                      <Ionicons
+                        name="document-text-outline"
+                        size={15}
+                        color="#2563EB"
+                      />
+
                       <Text
                         style={
                           styles.applicationButtonText
@@ -590,6 +673,36 @@ export default function CandidatesScreen() {
           )
         )}
       </ScrollView>
+    </View>
+  );
+}
+
+function StatCard({
+  icon,
+  number,
+  label,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  number: number;
+  label: string;
+}) {
+  return (
+    <View style={styles.statCard}>
+      <View style={styles.statIcon}>
+        <Ionicons
+          name={icon}
+          size={18}
+          color="#2563EB"
+        />
+      </View>
+
+      <Text style={styles.statNumber}>
+        {number}
+      </Text>
+
+      <Text style={styles.statLabel}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -630,10 +743,13 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: '#F1F5F9',
     borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
 
   backText: {
@@ -657,9 +773,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 14,
+    padding: 13,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+  },
+
+  statIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 7,
   },
 
   statNumber: {
@@ -685,16 +811,12 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  searchIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-
   searchInput: {
     flex: 1,
     height: 48,
     fontSize: 14,
     color: '#0F172A',
+    marginLeft: 8,
   },
 
   filterScroll: {
@@ -707,9 +829,15 @@ const styles = StyleSheet.create({
 
   filterActive: {
     backgroundColor: '#2563EB',
-    paddingHorizontal: 15,
+    paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  filterCheck: {
+    marginRight: 4,
   },
 
   filterActiveText: {
@@ -746,8 +874,24 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
 
-  resultCount: {
+  resultBadge: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+
+  resultBadgeText: {
     fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+  },
+
+  resultBadgeLabel: {
+    fontSize: 11,
     color: '#64748B',
   },
 
@@ -808,6 +952,9 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 12,
     marginLeft: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
 
   statusText: {
@@ -826,6 +973,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+
+  matchLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  aiIconContainer: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 7,
   },
 
   matchLabel: {
@@ -854,10 +1016,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 
+  opportunityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 7,
+  },
+
   opportunityText: {
+    flex: 1,
     fontSize: 11,
     color: '#64748B',
-    marginTop: 7,
+    marginLeft: 5,
   },
 
   actionRow: {
@@ -872,6 +1041,9 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderRadius: 9,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 5,
   },
 
   viewButtonText: {
@@ -886,6 +1058,9 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderRadius: 9,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 5,
   },
 
   applicationButtonText: {
@@ -903,9 +1078,14 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
 
-  emptyIcon: {
-    fontSize: 35,
-    marginBottom: 10,
+  emptyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
 
   emptyTitle: {

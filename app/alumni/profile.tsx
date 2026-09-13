@@ -1,17 +1,20 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as DocumentPicker from 'expo-document-picker';
 import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
+  Alert,
   Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 const ALUMNI_PROFILE_KEY = 'careerforge_alumni_profile';
 const ALUMNI_EXPERIENCE_KEY = 'careerforge_alumni_experience';
+const ALUMNI_DOCUMENTS_KEY = 'careerforge_alumni_documents';
 
 type AlumniProfileData = {
   fullName: string;
@@ -34,6 +37,16 @@ type Experience = {
   description: string;
 };
 
+type AlumniDocument = {
+  id: string;
+  type: 'cv' | 'certificate' | 'other';
+  name: string;
+  uri: string;
+  mimeType?: string;
+  size?: number;
+  uploadedAt: string;
+};
+
 const DEFAULT_PROFILE: AlumniProfileData = {
   fullName: 'Alumni Member',
   email: 'alumni@careerforge.ai',
@@ -51,6 +64,8 @@ export default function AlumniProfile() {
     useState<AlumniProfileData>(DEFAULT_PROFILE);
 
   const [experiences, setExperiences] = useState<Experience[]>([]);
+
+  const [documents, setDocuments] = useState<AlumniDocument[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -92,12 +107,29 @@ export default function AlumniProfile() {
               setExperiences([]);
             }
           }
+
+          const savedDocuments = await AsyncStorage.getItem(
+            ALUMNI_DOCUMENTS_KEY
+          );
+
+          if (savedDocuments) {
+            const parsedDocuments = JSON.parse(savedDocuments);
+
+            if (isActive) {
+              setDocuments(parsedDocuments);
+            }
+          } else {
+            if (isActive) {
+              setDocuments([]);
+            }
+          }
         } catch (error) {
           console.log('Error loading alumni profile:', error);
 
           if (isActive) {
             setProfile(DEFAULT_PROFILE);
             setExperiences([]);
+            setDocuments([]);
           }
         }
       };
@@ -132,6 +164,235 @@ export default function AlumniProfile() {
     .map((skill) => skill.trim())
     .filter(Boolean);
 
+  const getDocument = (
+    type: AlumniDocument['type']
+  ) => {
+    return documents.find((document) => document.type === type);
+  };
+
+  const saveDocuments = async (
+    updatedDocuments: AlumniDocument[]
+  ) => {
+    try {
+      await AsyncStorage.setItem(
+        ALUMNI_DOCUMENTS_KEY,
+        JSON.stringify(updatedDocuments)
+      );
+
+      setDocuments(updatedDocuments);
+    } catch (error) {
+      console.log('Error saving documents:', error);
+
+      Alert.alert(
+        'Unable to save',
+        'The document information could not be saved.'
+      );
+    }
+  };
+
+  const uploadDocument = async (
+    type: AlumniDocument['type']
+  ) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'image/*',
+        ],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const selectedFile = result.assets[0];
+
+      const newDocument: AlumniDocument = {
+        id: `${type}-${Date.now()}`,
+        type,
+        name: selectedFile.name,
+        uri: selectedFile.uri,
+        mimeType: selectedFile.mimeType,
+        size: selectedFile.size,
+        uploadedAt: new Date().toISOString(),
+      };
+
+      const updatedDocuments = [
+        ...documents.filter(
+          (document) => document.type !== type
+        ),
+        newDocument,
+      ];
+
+      await saveDocuments(updatedDocuments);
+
+      Alert.alert(
+        'Document uploaded',
+        `${selectedFile.name} has been added to your profile.`
+      );
+    } catch (error) {
+      console.log('Document picker error:', error);
+
+      Alert.alert(
+        'Upload failed',
+        'Something went wrong while selecting the document.'
+      );
+    }
+  };
+
+  const removeDocument = (
+    document: AlumniDocument
+  ) => {
+    Alert.alert(
+      'Remove document',
+      `Are you sure you want to remove "${document.name}"?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            const updatedDocuments = documents.filter(
+              (item) => item.id !== document.id
+            );
+
+            await saveDocuments(updatedDocuments);
+          },
+        },
+      ]
+    );
+  };
+
+  const formatFileSize = (size?: number) => {
+    if (!size) {
+      return '';
+    }
+
+    if (size < 1024) {
+      return `${size} B`;
+    }
+
+    if (size < 1024 * 1024) {
+      return `${(size / 1024).toFixed(1)} KB`;
+    }
+
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const renderDocumentRow = ({
+    type,
+    title,
+    emptyText,
+    icon,
+  }: {
+    type: AlumniDocument['type'];
+    title: string;
+    emptyText: string;
+    icon: keyof typeof Ionicons.glyphMap;
+  }) => {
+    const document = getDocument(type);
+
+    return (
+      <View style={styles.documentItem}>
+        <View style={styles.documentTopRow}>
+          <View style={styles.documentLeft}>
+            <View style={styles.documentIcon}>
+              <Ionicons
+                name={icon}
+                size={20}
+                color="#1769AA"
+              />
+            </View>
+
+            <View style={styles.documentDetails}>
+              <Text style={styles.documentTitle}>
+                {title}
+              </Text>
+
+              {document ? (
+                <>
+                  <Text
+                    style={styles.documentFileName}
+                    numberOfLines={1}
+                  >
+                    {document.name}
+                  </Text>
+
+                  <View style={styles.uploadedStatusRow}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={14}
+                      color="#16803C"
+                    />
+
+                    <Text style={styles.uploadedStatus}>
+                      Uploaded
+                    </Text>
+
+                    {document.size ? (
+                      <Text style={styles.fileSize}>
+                        • {formatFileSize(document.size)}
+                      </Text>
+                    ) : null}
+                  </View>
+                </>
+              ) : (
+                <Text style={styles.documentStatus}>
+                  {emptyText}
+                </Text>
+              )}
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.documentActions}>
+          <Pressable
+            style={styles.uploadButton}
+            onPress={() => uploadDocument(type)}
+          >
+            <Ionicons
+              name={
+                document
+                  ? 'swap-horizontal-outline'
+                  : 'cloud-upload-outline'
+              }
+              size={17}
+              color="#1769AA"
+            />
+
+            <Text style={styles.uploadButtonText}>
+              {document ? 'Replace' : 'Upload'}
+            </Text>
+          </Pressable>
+
+          {document ? (
+            <Pressable
+              style={styles.removeButton}
+              onPress={() => removeDocument(document)}
+            >
+              <Ionicons
+                name="trash-outline"
+                size={17}
+                color="#B42318"
+              />
+
+              <Text style={styles.removeButtonText}>
+                Remove
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -158,7 +419,9 @@ export default function AlumniProfile() {
 
           <Pressable
             style={styles.editButton}
-            onPress={() => router.push('/alumni/edit-profile')}
+            onPress={() =>
+              router.push('/alumni/edit-profile')
+            }
           >
             <Ionicons
               name="create-outline"
@@ -220,7 +483,8 @@ export default function AlumniProfile() {
           </View>
 
           <Text style={styles.helperText}>
-            Complete your profile to improve your career matches.
+            Complete your profile to improve your career
+            matches.
           </Text>
         </View>
 
@@ -420,7 +684,9 @@ export default function AlumniProfile() {
 
           <Pressable
             style={styles.outlineButton}
-            onPress={() => router.push('/alumni/add-experience')}
+            onPress={() =>
+              router.push('/alumni/add-experience')
+            }
           >
             <Ionicons
               name="add"
@@ -450,61 +716,31 @@ export default function AlumniProfile() {
             </Text>
           </View>
 
-          <Pressable style={styles.documentRow}>
-            <View style={styles.documentLeft}>
-              <View style={styles.documentIcon}>
-                <Ionicons
-                  name="school-outline"
-                  size={20}
-                  color="#1769AA"
-                />
-              </View>
+          <Text style={styles.documentHelper}>
+            Upload your CV, qualification certificates and
+            other supporting documents.
+          </Text>
 
-              <View>
-                <Text style={styles.documentTitle}>
-                  Degree Certificate
-                </Text>
+          {renderDocumentRow({
+            type: 'certificate',
+            title: 'Degree Certificate',
+            emptyText: 'No certificate uploaded',
+            icon: 'school-outline',
+          })}
 
-                <Text style={styles.documentStatus}>
-                  Verification pending
-                </Text>
-              </View>
-            </View>
+          {renderDocumentRow({
+            type: 'cv',
+            title: 'CV / Resume',
+            emptyText: 'No CV uploaded',
+            icon: 'document-outline',
+          })}
 
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color="#98A2B3"
-            />
-          </Pressable>
-
-          <Pressable style={styles.documentRow}>
-            <View style={styles.documentLeft}>
-              <View style={styles.documentIcon}>
-                <Ionicons
-                  name="document-outline"
-                  size={20}
-                  color="#1769AA"
-                />
-              </View>
-
-              <View>
-                <Text style={styles.documentTitle}>
-                  CV / Resume
-                </Text>
-
-                <Text style={styles.documentStatus}>
-                  No CV uploaded
-                </Text>
-              </View>
-            </View>
-
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color="#98A2B3"
-            />
-          </Pressable>
+          {renderDocumentRow({
+            type: 'other',
+            title: 'Other Document',
+            emptyText: 'No other document uploaded',
+            icon: 'folder-outline',
+          })}
         </View>
 
         {/* AI Career Section */}
@@ -529,7 +765,9 @@ export default function AlumniProfile() {
 
           <Pressable
             style={styles.aiButton}
-            onPress={() => router.push('/alumni/career-insights')}
+            onPress={() =>
+              router.push('/alumni/career-insights')
+            }
           >
             <Text style={styles.aiButtonText}>
               View Career Insights
@@ -543,7 +781,6 @@ export default function AlumniProfile() {
           </Pressable>
         </View>
 
-        {/* Bottom spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
     </View>
@@ -681,13 +918,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  completionSubtitle: {
-    fontSize: 12,
-    color: '#667085',
-    marginTop: -10,
-    marginBottom: 14,
-  },
-
   percentage: {
     fontSize: 18,
     fontWeight: '800',
@@ -699,6 +929,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
     borderRadius: 10,
     overflow: 'hidden',
+    marginTop: 12,
   },
 
   progressBar: {
@@ -867,13 +1098,23 @@ const styles = StyleSheet.create({
 
   /* Documents */
 
-  documentRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
+  documentHelper: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#667085',
+    marginTop: -7,
+    marginBottom: 10,
+  },
+
+  documentItem: {
+    paddingVertical: 15,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
+  },
+
+  documentTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 
   documentLeft: {
@@ -883,13 +1124,17 @@ const styles = StyleSheet.create({
   },
 
   documentIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: '#E7EEF7',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 11,
+  },
+
+  documentDetails: {
+    flex: 1,
   },
 
   documentTitle: {
@@ -898,10 +1143,78 @@ const styles = StyleSheet.create({
     color: '#0B1F3A',
   },
 
+  documentFileName: {
+    fontSize: 12,
+    color: '#475467',
+    marginTop: 4,
+  },
+
   documentStatus: {
     fontSize: 12,
     color: '#667085',
     marginTop: 4,
+  },
+
+  uploadedStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+    gap: 4,
+  },
+
+  uploadedStatus: {
+    fontSize: 12,
+    color: '#16803C',
+    fontWeight: '700',
+  },
+
+  fileSize: {
+    fontSize: 12,
+    color: '#667085',
+  },
+
+  documentActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 11,
+    gap: 9,
+  },
+
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#1769AA',
+    borderRadius: 9,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+  },
+
+  uploadButtonText: {
+    color: '#1769AA',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  removeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#F0B8B5',
+    backgroundColor: '#FFF5F4',
+    borderRadius: 9,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+  },
+
+  removeButtonText: {
+    color: '#B42318',
+    fontSize: 13,
+    fontWeight: '700',
   },
 
   /* AI */

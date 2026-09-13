@@ -4,7 +4,7 @@ export default function StudentLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="dashboard" />
-      <Stack.Screen name="notification" />
+      <Stack.Screen name="notifications" />
       <Stack.Screen name="profile" />
       <Stack.Screen name="ai-career-assistant" />
       <Stack.Screen name="career-roadmap" />
@@ -29,6 +29,8 @@ export default function StudentLayout() {
       <Stack.Screen name="improve-cv" />
       <Stack.Screen name="launch-career" />
       <Stack.Screen name="skills" />
+      <Stack.Screen name="employability-analysis" />
+      <Stack.Screen name="saved-opportunities" />
     </Stack>
   );
 }

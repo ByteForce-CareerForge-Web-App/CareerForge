@@ -1,4 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useMemo,
+  useState,
+} from 'react';
 import {
   View,
   Text,
@@ -7,9 +11,45 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const opportunities = [
+const OPPORTUNITIES_KEY =
+  'careerforge_business_opportunities';
+
+type BusinessOpportunity = {
+  id: string;
+  title: string;
+  type: string;
+  description?: string;
+  skills?: string;
+  location: string;
+  arrangement?: string;
+  salary?: string;
+  deadline?: string;
+  positions?: string;
+  qualification?: string;
+  applications?: number;
+  shortlisted?: number;
+  status?: 'Active' | 'Closed';
+  createdAt?: string;
+};
+
+type AlumniOpportunity = {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  type: string;
+  salary: string;
+  match: string;
+  description: string;
+  skills: string[];
+  deadline: string;
+  arrangement?: string;
+};
+
+const defaultOpportunities: AlumniOpportunity[] = [
   {
     id: '1',
     title: 'Junior Data Analyst',
@@ -21,6 +61,8 @@ const opportunities = [
     description:
       'Join our analytics team and help transform business data into meaningful insights and reports.',
     skills: ['Python', 'SQL', 'Excel', 'Power BI'],
+    deadline: '30 September 2026',
+    arrangement: 'Hybrid',
   },
   {
     id: '2',
@@ -33,6 +75,8 @@ const opportunities = [
     description:
       'Work with business teams to develop dashboards, reports and data-driven solutions.',
     skills: ['Power BI', 'SQL', 'Data Visualisation'],
+    deadline: '15 October 2026',
+    arrangement: 'Hybrid',
   },
   {
     id: '3',
@@ -45,6 +89,8 @@ const opportunities = [
     description:
       'Gain practical experience working with machine learning, analytics and real-world datasets.',
     skills: ['Python', 'Machine Learning', 'Pandas'],
+    deadline: '30 September 2026',
+    arrangement: 'On-site',
   },
   {
     id: '4',
@@ -57,36 +103,153 @@ const opportunities = [
     description:
       'Build and maintain modern software applications while working with an experienced development team.',
     skills: ['JavaScript', 'React', 'Git', 'APIs'],
+    deadline: '20 October 2026',
+    arrangement: 'Remote',
   },
 ];
 
 export default function AlumniOpportunities() {
   const [search, setSearch] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('All');
+  const [selectedFilter, setSelectedFilter] =
+    useState('All');
+
+  const [businessOpportunities, setBusinessOpportunities] =
+    useState<AlumniOpportunity[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadBusinessOpportunities();
+    }, [])
+  );
+
+  const loadBusinessOpportunities = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(
+        OPPORTUNITIES_KEY
+      );
+
+      if (!stored) {
+        setBusinessOpportunities([]);
+        return;
+      }
+
+      const parsed: BusinessOpportunity[] =
+        JSON.parse(stored);
+
+      if (!Array.isArray(parsed)) {
+        setBusinessOpportunities([]);
+        return;
+      }
+
+      const converted: AlumniOpportunity[] = parsed
+        .filter(
+          (opportunity) =>
+            opportunity.status !== 'Closed'
+        )
+        .map((opportunity) => {
+          const skills =
+            opportunity.skills
+              ?.split(',')
+              .map((skill) => skill.trim())
+              .filter(Boolean) || [];
+
+          return {
+            id: `business-${opportunity.id}`,
+            title:
+              opportunity.title ||
+              'Untitled Opportunity',
+            company: 'Business Employer',
+            location:
+              opportunity.location ||
+              'Location not specified',
+            type:
+              opportunity.type ||
+              'Opportunity',
+            salary:
+              opportunity.salary?.trim()
+                ? opportunity.salary.trim()
+                : 'Salary not specified',
+            match: 'AI',
+            description:
+              opportunity.description ||
+              'No job description provided.',
+            skills,
+            deadline:
+              opportunity.deadline ||
+              'Not specified',
+            arrangement:
+              opportunity.arrangement ||
+              'Not specified',
+          };
+        });
+
+      setBusinessOpportunities(converted);
+    } catch (error) {
+      console.log(
+        'Error loading Business opportunities:',
+        error
+      );
+
+      setBusinessOpportunities([]);
+    }
+  };
+
+  const allOpportunities = useMemo(() => {
+    return [
+      ...businessOpportunities,
+      ...defaultOpportunities,
+    ];
+  }, [businessOpportunities]);
 
   const filteredOpportunities = useMemo(() => {
-    return opportunities.filter((opportunity) => {
-      const searchText = search.toLowerCase().trim();
+    return allOpportunities.filter((opportunity) => {
+      const searchText =
+        search.toLowerCase().trim();
 
       const matchesSearch =
         searchText.length === 0 ||
-        opportunity.title.toLowerCase().includes(searchText) ||
-        opportunity.company.toLowerCase().includes(searchText) ||
-        opportunity.location.toLowerCase().includes(searchText) ||
-        opportunity.type.toLowerCase().includes(searchText) ||
+        opportunity.title
+          .toLowerCase()
+          .includes(searchText) ||
+        opportunity.company
+          .toLowerCase()
+          .includes(searchText) ||
+        opportunity.location
+          .toLowerCase()
+          .includes(searchText) ||
+        opportunity.type
+          .toLowerCase()
+          .includes(searchText) ||
+        opportunity.salary
+          .toLowerCase()
+          .includes(searchText) ||
         opportunity.skills.some((skill) =>
-          skill.toLowerCase().includes(searchText)
+          skill
+            .toLowerCase()
+            .includes(searchText)
         );
 
       const matchesFilter =
         selectedFilter === 'All' ||
         opportunity.type === selectedFilter ||
         (selectedFilter === 'Remote' &&
-          opportunity.location.toLowerCase() === 'remote');
+          opportunity.location
+            .toLowerCase()
+            .trim() === 'remote') ||
+        (selectedFilter === 'Remote' &&
+          opportunity.arrangement
+            ?.toLowerCase()
+            .trim() === 'remote');
 
-      return matchesSearch && matchesFilter;
+      return (
+        matchesSearch && matchesFilter
+      );
     });
-  }, [search, selectedFilter]);
+  }, [
+    allOpportunities,
+    search,
+    selectedFilter,
+  ]);
 
   return (
     <View style={styles.container}>
@@ -97,11 +260,16 @@ export default function AlumniOpportunities() {
           style={styles.backButton}
           activeOpacity={0.8}
         >
-          <Text style={styles.backText}>←</Text>
+          <Text style={styles.backText}>
+            ←
+          </Text>
         </TouchableOpacity>
 
         <View style={styles.headerTextContainer}>
-          <Text style={styles.headerTitle}>Opportunities</Text>
+          <Text style={styles.headerTitle}>
+            Opportunities
+          </Text>
+
           <Text style={styles.headerSubtitle}>
             Find your next career opportunity
           </Text>
@@ -111,28 +279,42 @@ export default function AlumniOpportunities() {
         <TouchableOpacity
           style={styles.savedButton}
           onPress={() =>
-            router.push('/alumni/saved-opportunities')
+            router.push(
+              '/alumni/saved-opportunities'
+            )
           }
           activeOpacity={0.8}
         >
-          <Text style={styles.savedIcon}>🔖</Text>
+          <Text style={styles.savedIcon}>
+            🔖
+          </Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={
+          styles.content
+        }
       >
         {/* Saved Opportunities Banner */}
         <TouchableOpacity
           style={styles.savedBanner}
           onPress={() =>
-            router.push('/alumni/saved-opportunities')
+            router.push(
+              '/alumni/saved-opportunities'
+            )
           }
           activeOpacity={0.85}
         >
           <View style={styles.savedBannerIcon}>
-            <Text style={styles.savedBannerIconText}>🔖</Text>
+            <Text
+              style={
+                styles.savedBannerIconText
+              }
+            >
+              🔖
+            </Text>
           </View>
 
           <View style={styles.savedBannerInfo}>
@@ -141,16 +323,23 @@ export default function AlumniOpportunities() {
             </Text>
 
             <Text style={styles.savedBannerText}>
-              View opportunities you've saved for later.
+              View opportunities you've saved
+              for later.
             </Text>
           </View>
 
-          <Text style={styles.savedBannerArrow}>→</Text>
+          <Text
+            style={styles.savedBannerArrow}
+          >
+            →
+          </Text>
         </TouchableOpacity>
 
         {/* Search */}
         <View style={styles.searchContainer}>
-          <Text style={styles.searchIcon}>⌕</Text>
+          <Text style={styles.searchIcon}>
+            ⌕
+          </Text>
 
           <TextInput
             style={styles.searchInput}
@@ -164,7 +353,9 @@ export default function AlumniOpportunities() {
         {/* AI Recommendation Banner */}
         <View style={styles.aiCard}>
           <View style={styles.aiIcon}>
-            <Text style={styles.aiIconText}>✦</Text>
+            <Text style={styles.aiIconText}>
+              ✦
+            </Text>
           </View>
 
           <View style={styles.aiInfo}>
@@ -173,15 +364,59 @@ export default function AlumniOpportunities() {
             </Text>
 
             <Text style={styles.aiDescription}>
-              These opportunities have been selected based on your
-              professional profile and career interests.
+              These opportunities have been
+              selected based on your professional
+              profile and career interests.
             </Text>
           </View>
         </View>
 
+        {/* Business Opportunity Notice */}
+        {businessOpportunities.length > 0 && (
+          <View style={styles.businessNotice}>
+            <View
+              style={styles.businessNoticeIcon}
+            >
+              <Text
+                style={
+                  styles.businessNoticeIconText
+                }
+              >
+                ✓
+              </Text>
+            </View>
+
+            <View
+              style={styles.businessNoticeInfo}
+            >
+              <Text
+                style={styles.businessNoticeTitle}
+              >
+                New employer opportunities
+              </Text>
+
+              <Text
+                style={styles.businessNoticeText}
+              >
+                {businessOpportunities.length}{' '}
+                opportunity
+                {businessOpportunities.length !==
+                1
+                  ? 'ies'
+                  : 'y'}{' '}
+                posted by employers.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Filters */}
         <View style={styles.filterRow}>
-          {['All', 'Full-time', 'Remote'].map((filter) => (
+          {[
+            'All',
+            'Full-time',
+            'Remote',
+          ].map((filter) => (
             <TouchableOpacity
               key={filter}
               style={[
@@ -189,7 +424,9 @@ export default function AlumniOpportunities() {
                 selectedFilter === filter &&
                   styles.activeFilterButton,
               ]}
-              onPress={() => setSelectedFilter(filter)}
+              onPress={() =>
+                setSelectedFilter(filter)
+              }
               activeOpacity={0.8}
             >
               <Text
@@ -218,103 +455,190 @@ export default function AlumniOpportunities() {
 
         {/* Opportunity Cards */}
         {filteredOpportunities.length > 0 ? (
-          filteredOpportunities.map((opportunity) => (
-            <TouchableOpacity
-              key={opportunity.id}
-              style={styles.opportunityCard}
-              onPress={() =>
-                router.push({
-                  pathname: '/alumni/opportunity-details',
-                  params: {
-                    id: opportunity.id,
-                    title: opportunity.title,
-                    company: opportunity.company,
-                    location: opportunity.location,
-                    type: opportunity.type,
-                    salary: opportunity.salary,
-                    match: opportunity.match,
-                    description: opportunity.description,
-                    skills: opportunity.skills.join(','),
-                  },
-                })
-              }
-              activeOpacity={0.85}
-            >
-              {/* Card Header */}
-              <View style={styles.cardHeader}>
-                <View style={styles.companyIcon}>
-                  <Text style={styles.companyIconText}>
-                    {opportunity.company.charAt(0)}
-                  </Text>
-                </View>
-
-                <View style={styles.cardTitleContainer}>
-                  <Text style={styles.jobTitle}>
-                    {opportunity.title}
-                  </Text>
-
-                  <Text style={styles.companyName}>
-                    {opportunity.company}
-                  </Text>
-                </View>
-
-                <View style={styles.matchBadge}>
-                  <Text style={styles.matchText}>
-                    {opportunity.match}
-                  </Text>
-
-                  <Text style={styles.matchLabel}>
-                    match
-                  </Text>
-                </View>
-              </View>
-
-              {/* Location */}
-              <Text style={styles.detailText}>
-                📍 {opportunity.location}
-              </Text>
-
-              {/* Employment Type */}
-              <Text style={styles.detailText}>
-                💼 {opportunity.type}
-              </Text>
-
-              {/* Salary */}
-              <Text style={styles.detailText}>
-                💰 {opportunity.salary}
-              </Text>
-
-              {/* Skills */}
-              <View style={styles.skillsContainer}>
-                {opportunity.skills.map((skill) => (
+          filteredOpportunities.map(
+            (opportunity) => (
+              <TouchableOpacity
+                key={opportunity.id}
+                style={
+                  styles.opportunityCard
+                }
+                onPress={() =>
+                  router.push({
+                    pathname:
+                      '/alumni/opportunity-details',
+                    params: {
+                      id: opportunity.id,
+                      title:
+                        opportunity.title,
+                      company:
+                        opportunity.company,
+                      location:
+                        opportunity.location,
+                      type:
+                        opportunity.type,
+                      salary:
+                        opportunity.salary,
+                      match:
+                        opportunity.match,
+                      description:
+                        opportunity.description,
+                      skills:
+                        opportunity.skills.join(
+                          ','
+                        ),
+                      deadline:
+                        opportunity.deadline,
+                      arrangement:
+                        opportunity.arrangement ||
+                        '',
+                    },
+                  })
+                }
+                activeOpacity={0.85}
+              >
+                {/* Card Header */}
+                <View style={styles.cardHeader}>
                   <View
-                    key={skill}
-                    style={styles.skillBadge}
+                    style={
+                      styles.companyIcon
+                    }
                   >
-                    <Text style={styles.skillText}>
-                      {skill}
+                    <Text
+                      style={
+                        styles.companyIconText
+                      }
+                    >
+                      {opportunity.company.charAt(
+                        0
+                      )}
                     </Text>
                   </View>
-                ))}
-              </View>
 
-              <View style={styles.viewContainer}>
-                <Text style={styles.viewText}>
-                  View Opportunity →
+                  <View
+                    style={
+                      styles.cardTitleContainer
+                    }
+                  >
+                    <Text
+                      style={styles.jobTitle}
+                    >
+                      {opportunity.title}
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.companyName
+                      }
+                    >
+                      {opportunity.company}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={styles.matchBadge}
+                  >
+                    <Text
+                      style={styles.matchText}
+                    >
+                      {opportunity.match}
+                    </Text>
+
+                    <Text
+                      style={styles.matchLabel}
+                    >
+                      {opportunity.match ===
+                      'AI'
+                        ? 'match'
+                        : 'match'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Location */}
+                <Text style={styles.detailText}>
+                  📍 {opportunity.location}
                 </Text>
-              </View>
-            </TouchableOpacity>
-          ))
+
+                {/* Employment Type */}
+                <Text style={styles.detailText}>
+                  💼 {opportunity.type}
+                </Text>
+
+                {/* Salary */}
+                <Text style={styles.detailText}>
+                  R {opportunity.salary}
+                </Text>
+
+                {/* Arrangement */}
+                {opportunity.arrangement &&
+                  opportunity.arrangement !==
+                    'Not specified' && (
+                    <Text
+                      style={
+                        styles.detailText
+                      }
+                    >
+                      Work arrangement:{' '}
+                      {opportunity.arrangement}
+                    </Text>
+                  )}
+
+                {/* Skills */}
+                {opportunity.skills.length >
+                  0 && (
+                  <View
+                    style={
+                      styles.skillsContainer
+                    }
+                  >
+                    {opportunity.skills.map(
+                      (skill) => (
+                        <View
+                          key={skill}
+                          style={
+                            styles.skillBadge
+                          }
+                        >
+                          <Text
+                            style={
+                              styles.skillText
+                            }
+                          >
+                            {skill}
+                          </Text>
+                        </View>
+                      )
+                    )}
+                  </View>
+                )}
+
+                <View
+                  style={
+                    styles.viewContainer
+                  }
+                >
+                  <Text
+                    style={styles.viewText}
+                  >
+                    View Opportunity →
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )
+          )
         ) : (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>🔎</Text>
+            <Text style={styles.emptyIcon}>
+              🔎
+            </Text>
 
             <Text style={styles.emptyTitle}>
               No opportunities found
             </Text>
 
             <Text style={styles.emptyText}>
-              Try a different search term or select another filter.
+              Try a different search term or
+              select another filter.
             </Text>
 
             <TouchableOpacity
@@ -325,7 +649,9 @@ export default function AlumniOpportunities() {
               }}
               activeOpacity={0.8}
             >
-              <Text style={styles.clearButtonText}>
+              <Text
+                style={styles.clearButtonText}
+              >
                 Clear Search & Filters
               </Text>
             </TouchableOpacity>
@@ -335,10 +661,16 @@ export default function AlumniOpportunities() {
         {/* Back to Dashboard */}
         <TouchableOpacity
           style={styles.dashboardButton}
-          onPress={() => router.replace('/alumni/dashboard')}
+          onPress={() =>
+            router.replace(
+              '/alumni/dashboard'
+            )
+          }
           activeOpacity={0.8}
         >
-          <Text style={styles.dashboardButtonText}>
+          <Text
+            style={styles.dashboardButtonText}
+          >
             Back to Alumni Dashboard
           </Text>
         </TouchableOpacity>
@@ -350,11 +682,11 @@ export default function AlumniOpportunities() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F7FB',
+    backgroundColor: '#F8FAFC',
   },
 
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0B1F3A',
     paddingTop: 55,
     paddingBottom: 18,
     paddingHorizontal: 20,
@@ -367,7 +699,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#17345F',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -375,7 +707,7 @@ const styles = StyleSheet.create({
 
   backText: {
     fontSize: 24,
-    color: '#4F46E5',
+    color: '#FFFFFF',
   },
 
   headerTextContainer: {
@@ -385,12 +717,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#24243A',
+    color: '#FFFFFF',
   },
 
   headerSubtitle: {
     fontSize: 13,
-    color: '#777777',
+    color: '#CBD5E1',
     marginTop: 3,
   },
 
@@ -398,7 +730,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#17345F',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 10,
@@ -421,14 +753,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E4DEFF',
+    borderColor: '#D7E3F4',
   },
 
   savedBannerIcon: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#E8F0FA',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -445,18 +777,18 @@ const styles = StyleSheet.create({
   savedBannerTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#312E81',
+    color: '#0B1F3A',
     marginBottom: 3,
   },
 
   savedBannerText: {
     fontSize: 11,
-    color: '#777784',
+    color: '#64748B',
   },
 
   savedBannerArrow: {
     fontSize: 22,
-    color: '#5B3FD1',
+    color: '#2563EB',
     marginLeft: 8,
   },
 
@@ -481,11 +813,11 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#24243A',
+    color: '#1E293B',
   },
 
   aiCard: {
-    backgroundColor: '#EAE8FF',
+    backgroundColor: '#E8F0FA',
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
@@ -496,7 +828,7 @@ const styles = StyleSheet.create({
     width: 45,
     height: 45,
     borderRadius: 23,
-    backgroundColor: '#6C63FF',
+    backgroundColor: '#2563EB',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -514,14 +846,57 @@ const styles = StyleSheet.create({
   aiTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#312E81',
+    color: '#0B1F3A',
     marginBottom: 4,
   },
 
   aiDescription: {
     fontSize: 12,
-    color: '#5F5F70',
+    color: '#475569',
     lineHeight: 18,
+  },
+
+  businessNotice: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 14,
+    padding: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+
+  businessNoticeIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#16A34A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 11,
+  },
+
+  businessNoticeIconText: {
+    color: '#FFFFFF',
+    fontSize: 19,
+    fontWeight: '800',
+  },
+
+  businessNoticeInfo: {
+    flex: 1,
+  },
+
+  businessNoticeTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#166534',
+    marginBottom: 2,
+  },
+
+  businessNoticeText: {
+    fontSize: 11,
+    color: '#4D7C5A',
   },
 
   filterRow: {
@@ -532,7 +907,7 @@ const styles = StyleSheet.create({
   filterButton: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#D9D9E5',
+    borderColor: '#D9E2EC',
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 15,
@@ -540,14 +915,14 @@ const styles = StyleSheet.create({
   },
 
   activeFilterButton: {
-    backgroundColor: '#6C63FF',
-    borderColor: '#6C63FF',
+    backgroundColor: '#0B1F3A',
+    borderColor: '#0B1F3A',
   },
 
   filterText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4F46E5',
+    color: '#2563EB',
   },
 
   activeFilterText: {
@@ -564,12 +939,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#24243A',
+    color: '#0B1F3A',
   },
 
   resultCount: {
     fontSize: 12,
-    color: '#777777',
+    color: '#64748B',
     fontWeight: '600',
   },
 
@@ -591,7 +966,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#EAE8FF',
+    backgroundColor: '#E8F0FA',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -600,7 +975,7 @@ const styles = StyleSheet.create({
   companyIconText: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#6C63FF',
+    color: '#2563EB',
   },
 
   cardTitleContainer: {
@@ -610,13 +985,13 @@ const styles = StyleSheet.create({
   jobTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#24243A',
+    color: '#0B1F3A',
     marginBottom: 4,
   },
 
   companyName: {
     fontSize: 13,
-    color: '#777777',
+    color: '#64748B',
   },
 
   matchBadge: {
@@ -640,7 +1015,7 @@ const styles = StyleSheet.create({
 
   detailText: {
     fontSize: 13,
-    color: '#5F5F70',
+    color: '#475569',
     marginBottom: 7,
   },
 
@@ -667,13 +1042,13 @@ const styles = StyleSheet.create({
 
   viewContainer: {
     borderTopWidth: 1,
-    borderTopColor: '#EEEEF5',
+    borderTopColor: '#E2E8F0',
     marginTop: 10,
     paddingTop: 12,
   },
 
   viewText: {
-    color: '#4F46E5',
+    color: '#2563EB',
     fontSize: 13,
     fontWeight: '800',
   },
@@ -694,19 +1069,19 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#24243A',
+    color: '#0B1F3A',
   },
 
   emptyText: {
     fontSize: 13,
-    color: '#777777',
+    color: '#64748B',
     textAlign: 'center',
     lineHeight: 19,
     marginTop: 7,
   },
 
   clearButton: {
-    backgroundColor: '#6C63FF',
+    backgroundColor: '#0B1F3A',
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -720,7 +1095,7 @@ const styles = StyleSheet.create({
   },
 
   dashboardButton: {
-    backgroundColor: '#24243A',
+    backgroundColor: '#0B1F3A',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

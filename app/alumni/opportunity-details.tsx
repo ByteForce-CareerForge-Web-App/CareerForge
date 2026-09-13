@@ -40,9 +40,10 @@ export default function OpportunityDetails() {
       : 'Full-time';
 
   const salary =
-    typeof params.salary === 'string'
+    typeof params.salary === 'string' &&
+    params.salary.trim().length > 0
       ? params.salary
-      : 'R18,000 - R25,000 / month';
+      : 'Salary not specified';
 
   const match =
     typeof params.match === 'string'
@@ -50,9 +51,27 @@ export default function OpportunityDetails() {
       : '94%';
 
   const description =
-    typeof params.description === 'string'
+    typeof params.description === 'string' &&
+    params.description.trim().length > 0
       ? params.description
-      : 'Join our analytics team and help transform business data into meaningful insights and reports.';
+      : 'No job description provided.';
+
+  const deadline =
+    typeof params.deadline === 'string' &&
+    params.deadline.trim().length > 0
+      ? params.deadline
+      : 'Not specified';
+
+  const arrangement =
+    typeof params.arrangement === 'string' &&
+    params.arrangement.trim().length > 0
+      ? params.arrangement
+      : 'Not specified';
+
+  const qualification =
+    typeof params.qualification === 'string'
+      ? params.qualification
+      : '';
 
   const skillsString =
     typeof params.skills === 'string'
@@ -67,16 +86,25 @@ export default function OpportunityDetails() {
   const [isSaved, setIsSaved] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
 
-  // Create a simple unique ID for this opportunity
-  const opportunityId = `${title}-${company}`
-    .toLowerCase()
-    .replace(/\s+/g, '-');
+  /*
+   * Use the ID supplied by the opportunity listing
+   * when available.
+   *
+   * For older/default opportunities, fall back
+   * to title + company.
+   */
+  const opportunityId =
+    typeof params.id === 'string' &&
+    params.id.trim().length > 0
+      ? params.id
+      : `${title}-${company}`
+          .toLowerCase()
+          .replace(/\s+/g, '-');
 
-  // Check saved and application status
   useEffect(() => {
     loadSavedStatus();
     loadApplicationStatus();
-  }, []);
+  }, [opportunityId]);
 
   async function loadSavedStatus() {
     try {
@@ -95,7 +123,8 @@ export default function OpportunityDetails() {
       }
 
       const alreadySaved = savedOpportunities.some(
-        (item: any) => item.id === opportunityId
+        (item: any) =>
+          item.id === opportunityId
       );
 
       setIsSaved(alreadySaved);
@@ -124,7 +153,8 @@ export default function OpportunityDetails() {
       }
 
       const alreadyApplied = applications.some(
-        (item: any) => item.id === opportunityId
+        (item: any) =>
+          item.id === opportunityId
       );
 
       setHasApplied(alreadyApplied);
@@ -150,9 +180,9 @@ export default function OpportunityDetails() {
         applications = [];
       }
 
-      // Prevent duplicate applications
       const alreadyApplied = applications.some(
-        (item: any) => item.id === opportunityId
+        (item: any) =>
+          item.id === opportunityId
       );
 
       if (alreadyApplied) {
@@ -163,7 +193,9 @@ export default function OpportunityDetails() {
             {
               text: 'View Applications',
               onPress: () =>
-                router.push('/alumni/my-applications'),
+                router.push(
+                  '/alumni/my-applications'
+                ),
             },
             {
               text: 'Close',
@@ -183,14 +215,17 @@ export default function OpportunityDetails() {
         location,
         type,
         salary,
-        appliedDate: new Date().toLocaleDateString(
-          'en-ZA',
-          {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-          }
-        ),
+        deadline,
+        arrangement,
+        appliedDate:
+          new Date().toLocaleDateString(
+            'en-ZA',
+            {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            }
+          ),
         status: 'Submitted',
       };
 
@@ -204,13 +239,15 @@ export default function OpportunityDetails() {
       setHasApplied(true);
 
       Alert.alert(
-        'Application Submitted 🎉',
+        'Application Submitted',
         `Your application for ${title} at ${company} has been submitted successfully.`,
         [
           {
             text: 'View My Applications',
             onPress: () =>
-              router.push('/alumni/my-applications'),
+              router.push(
+                '/alumni/my-applications'
+              ),
           },
           {
             text: 'Done',
@@ -246,9 +283,11 @@ export default function OpportunityDetails() {
       }
 
       if (isSaved) {
-        savedOpportunities = savedOpportunities.filter(
-          (item: any) => item.id !== opportunityId
-        );
+        savedOpportunities =
+          savedOpportunities.filter(
+            (item: any) =>
+              item.id !== opportunityId
+          );
 
         await AsyncStorage.setItem(
           SAVED_OPPORTUNITIES_KEY,
@@ -275,6 +314,9 @@ export default function OpportunityDetails() {
         match,
         description,
         skills: skillsString,
+        deadline,
+        arrangement,
+        qualification,
       };
 
       savedOpportunities.push(opportunity);
@@ -305,14 +347,16 @@ export default function OpportunityDetails() {
 
   return (
     <View style={styles.container}>
-
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
+          activeOpacity={0.8}
         >
-          <Text style={styles.backText}>←</Text>
+          <Text style={styles.backText}>
+            ←
+          </Text>
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>
@@ -322,15 +366,15 @@ export default function OpportunityDetails() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={
+          styles.content
+        }
       >
-
         {/* Job Header */}
         <View style={styles.jobHeaderCard}>
-
           <View style={styles.companyIcon}>
             <Text style={styles.companyIconText}>
-              {company.charAt(0)}
+              {company.charAt(0).toUpperCase()}
             </Text>
           </View>
 
@@ -351,16 +395,18 @@ export default function OpportunityDetails() {
               Career Match
             </Text>
           </View>
-
         </View>
 
         {/* Job Information */}
         <View style={styles.infoCard}>
-
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📍</Text>
+            <View style={styles.infoIconBox}>
+              <Text style={styles.infoIcon}>
+                L
+              </Text>
+            </View>
 
-            <View>
+            <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>
                 Location
               </Text>
@@ -372,9 +418,13 @@ export default function OpportunityDetails() {
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>💼</Text>
+            <View style={styles.infoIconBox}>
+              <Text style={styles.infoIcon}>
+                T
+              </Text>
+            </View>
 
-            <View>
+            <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>
                 Employment Type
               </Text>
@@ -386,34 +436,97 @@ export default function OpportunityDetails() {
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>💰</Text>
+            <View style={styles.infoIconBox}>
+              <Text style={styles.infoIcon}>
+                R
+              </Text>
+            </View>
 
-            <View>
+            <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>
                 Salary
               </Text>
 
-              <Text style={styles.infoValue}>
+              <Text
+                style={[
+                  styles.infoValue,
+                  salary ===
+                    'Salary not specified' &&
+                    styles.mutedValue,
+                ]}
+              >
                 {salary}
               </Text>
             </View>
           </View>
 
-          <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📅</Text>
+          {arrangement !==
+            'Not specified' && (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconBox}>
+                <Text
+                  style={styles.infoIcon}
+                >
+                  W
+                </Text>
+              </View>
 
-            <View>
+              <View
+                style={styles.infoContent}
+              >
+                <Text
+                  style={styles.infoLabel}
+                >
+                  Work Arrangement
+                </Text>
+
+                <Text
+                  style={styles.infoValue}
+                >
+                  {arrangement}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          <View style={styles.infoRow}>
+            <View style={styles.infoIconBox}>
+              <Text style={styles.infoIcon}>
+                D
+              </Text>
+            </View>
+
+            <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>
                 Closing Date
               </Text>
 
               <Text style={styles.infoValue}>
-                30 September 2026
+                {deadline}
               </Text>
             </View>
           </View>
-
         </View>
+
+        {/* Qualification */}
+        {qualification.trim().length >
+          0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              Qualification
+            </Text>
+
+            <View style={styles.qualificationCard}>
+              <Text
+                style={
+                  styles.qualificationText
+                }
+              >
+                {qualification}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Why This Matches */}
         <View style={styles.section}>
@@ -422,14 +535,22 @@ export default function OpportunityDetails() {
           </Text>
 
           <View style={styles.matchCard}>
-            <Text style={styles.matchCardIcon}>
-              ✦
-            </Text>
+            <View style={styles.matchCardIcon}>
+              <Text
+                style={
+                  styles.matchCardIconText
+                }
+              >
+                AI
+              </Text>
+            </View>
 
             <Text style={styles.matchCardText}>
-              Your professional profile and skills indicate a strong
-              match for this opportunity. You have several of the
-              technical skills requested by the employer.
+              Your professional profile and
+              skills indicate a strong match
+              for this opportunity. You have
+              several of the technical skills
+              requested by the employer.
             </Text>
           </View>
         </View>
@@ -445,9 +566,10 @@ export default function OpportunityDetails() {
           </Text>
 
           <Text style={styles.bodyText}>
-            You will collaborate with team members, analyse information,
-            prepare reports and contribute to data-driven business
-            decisions.
+            You will collaborate with team
+            members, analyse information,
+            prepare reports and contribute to
+            data-driven business decisions.
           </Text>
         </View>
 
@@ -462,11 +584,13 @@ export default function OpportunityDetails() {
           </Text>
 
           <Text style={styles.bullet}>
-            • Strong analytical and problem-solving skills
+            • Strong analytical and
+            problem-solving skills
           </Text>
 
           <Text style={styles.bullet}>
-            • Ability to work independently and within a team
+            • Ability to work independently
+            and within a team
           </Text>
 
           <Text style={styles.bullet}>
@@ -475,31 +599,36 @@ export default function OpportunityDetails() {
         </View>
 
         {/* Skills */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Skills Required
-          </Text>
+        {skills.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              Skills Required
+            </Text>
 
-          <View style={styles.skillsContainer}>
-            {skills.map((skill) => (
-              <View
-                key={skill}
-                style={styles.skillBadge}
-              >
-                <Text style={styles.skillText}>
-                  {skill}
-                </Text>
-              </View>
-            ))}
+            <View
+              style={styles.skillsContainer}
+            >
+              {skills.map((skill) => (
+                <View
+                  key={skill}
+                  style={styles.skillBadge}
+                >
+                  <Text
+                    style={styles.skillText}
+                  >
+                    {skill}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* AI Career Advice */}
         <View style={styles.aiCard}>
-
           <View style={styles.aiIcon}>
             <Text style={styles.aiIconText}>
-              ✦
+              AI
             </Text>
           </View>
 
@@ -509,19 +638,20 @@ export default function OpportunityDetails() {
             </Text>
 
             <Text style={styles.aiText}>
-              This opportunity could help strengthen your professional
-              experience and move you closer to your long-term career
-              goals.
+              This opportunity could help
+              strengthen your professional
+              experience and move you closer to
+              your long-term career goals.
             </Text>
           </View>
-
         </View>
 
         {/* Apply Button */}
         <TouchableOpacity
           style={[
             styles.applyButton,
-            hasApplied && styles.appliedButton,
+            hasApplied &&
+              styles.appliedButton,
           ]}
           onPress={handleApply}
           activeOpacity={0.8}
@@ -529,7 +659,8 @@ export default function OpportunityDetails() {
           <Text
             style={[
               styles.applyButtonText,
-              hasApplied && styles.appliedButtonText,
+              hasApplied &&
+                styles.appliedButtonText,
             ]}
           >
             {hasApplied
@@ -550,7 +681,8 @@ export default function OpportunityDetails() {
           <Text
             style={[
               styles.saveButtonText,
-              isSaved && styles.savedButtonText,
+              isSaved &&
+                styles.savedButtonText,
             ]}
           >
             {isSaved
@@ -561,14 +693,24 @@ export default function OpportunityDetails() {
 
         {/* Back to Opportunities */}
         <TouchableOpacity
-          style={styles.backToOpportunitiesButton}
-          onPress={() => router.push('/alumni/opportunities')}
+          style={
+            styles.backToOpportunitiesButton
+          }
+          onPress={() =>
+            router.push(
+              '/alumni/opportunities'
+            )
+          }
+          activeOpacity={0.8}
         >
-          <Text style={styles.backToOpportunitiesText}>
+          <Text
+            style={
+              styles.backToOpportunitiesText
+            }
+          >
             ← Back to Opportunities
           </Text>
         </TouchableOpacity>
-
       </ScrollView>
     </View>
   );
@@ -577,24 +719,24 @@ export default function OpportunityDetails() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F7FB',
+    backgroundColor: '#F8FAFC',
   },
 
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0B1F3A',
     paddingTop: 55,
     paddingBottom: 18,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 2,
+    elevation: 3,
   },
 
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#17345F',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -602,13 +744,13 @@ const styles = StyleSheet.create({
 
   backText: {
     fontSize: 24,
-    color: '#4F46E5',
+    color: '#FFFFFF',
   },
 
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#24243A',
+    color: '#FFFFFF',
   },
 
   content: {
@@ -629,7 +771,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 18,
-    backgroundColor: '#EAE8FF',
+    backgroundColor: '#E8F0FA',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 14,
@@ -638,20 +780,20 @@ const styles = StyleSheet.create({
   companyIconText: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#6C63FF',
+    color: '#2563EB',
   },
 
   jobTitle: {
     fontSize: 23,
     fontWeight: '800',
-    color: '#24243A',
+    color: '#0B1F3A',
     textAlign: 'center',
     marginBottom: 6,
   },
 
   companyName: {
     fontSize: 15,
-    color: '#777777',
+    color: '#64748B',
     marginBottom: 14,
   },
 
@@ -689,9 +831,24 @@ const styles = StyleSheet.create({
     marginBottom: 17,
   },
 
-  infoIcon: {
-    fontSize: 21,
+  infoIconBox: {
     width: 38,
+    height: 38,
+    borderRadius: 11,
+    backgroundColor: '#E8F0FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+
+  infoIcon: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#2563EB',
+  },
+
+  infoContent: {
+    flex: 1,
   },
 
   infoLabel: {
@@ -706,6 +863,11 @@ const styles = StyleSheet.create({
     color: '#334155',
   },
 
+  mutedValue: {
+    color: '#94A3B8',
+    fontStyle: 'italic',
+  },
+
   section: {
     marginBottom: 24,
   },
@@ -713,40 +875,65 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 19,
     fontWeight: '800',
-    color: '#24243A',
+    color: '#0B1F3A',
     marginBottom: 11,
+  },
+
+  qualificationCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#D7E3F4',
+  },
+
+  qualificationText: {
+    fontSize: 14,
+    color: '#334155',
+    fontWeight: '600',
   },
 
   bodyText: {
     fontSize: 14,
-    color: '#5F5F70',
+    color: '#475569',
     lineHeight: 22,
     marginBottom: 10,
   },
 
   bullet: {
     fontSize: 14,
-    color: '#5F5F70',
+    color: '#475569',
     lineHeight: 23,
   },
 
   matchCard: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#E8F0FA',
     borderRadius: 14,
     padding: 15,
     flexDirection: 'row',
+    alignItems: 'flex-start',
   },
 
   matchCardIcon: {
-    fontSize: 22,
-    color: '#4F46E5',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 10,
+  },
+
+  matchCardIconText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
 
   matchCardText: {
     flex: 1,
     fontSize: 13,
-    color: '#4338CA',
+    color: '#334155',
     lineHeight: 20,
   },
 
@@ -756,7 +943,7 @@ const styles = StyleSheet.create({
   },
 
   skillBadge: {
-    backgroundColor: '#EAE8FF',
+    backgroundColor: '#E8F0FA',
     borderRadius: 9,
     paddingVertical: 8,
     paddingHorizontal: 11,
@@ -765,13 +952,13 @@ const styles = StyleSheet.create({
   },
 
   skillText: {
-    color: '#4F46E5',
+    color: '#1D4ED8',
     fontSize: 12,
     fontWeight: '700',
   },
 
   aiCard: {
-    backgroundColor: '#F3E8FF',
+    backgroundColor: '#E8F0FA',
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
@@ -782,7 +969,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#2563EB',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -790,7 +977,8 @@ const styles = StyleSheet.create({
 
   aiIconText: {
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: 11,
+    fontWeight: '800',
   },
 
   aiContent: {
@@ -800,18 +988,18 @@ const styles = StyleSheet.create({
   aiTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#581C87',
+    color: '#0B1F3A',
     marginBottom: 5,
   },
 
   aiText: {
     fontSize: 12,
-    color: '#6B21A8',
+    color: '#475569',
     lineHeight: 19,
   },
 
   applyButton: {
-    backgroundColor: '#6C63FF',
+    backgroundColor: '#0B1F3A',
     borderRadius: 13,
     height: 54,
     alignItems: 'center',
@@ -838,7 +1026,7 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#6C63FF',
+    borderColor: '#2563EB',
     borderRadius: 13,
     height: 54,
     alignItems: 'center',
@@ -846,17 +1034,17 @@ const styles = StyleSheet.create({
   },
 
   saveButtonText: {
-    color: '#6C63FF',
+    color: '#2563EB',
     fontSize: 15,
     fontWeight: '700',
   },
 
   savedButton: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#E8F0FA',
   },
 
   savedButtonText: {
-    color: '#4F46E5',
+    color: '#1D4ED8',
   },
 
   backToOpportunitiesButton: {
@@ -865,7 +1053,7 @@ const styles = StyleSheet.create({
   },
 
   backToOpportunitiesText: {
-    color: '#6C63FF',
+    color: '#2563EB',
     fontSize: 14,
     fontWeight: '700',
   },

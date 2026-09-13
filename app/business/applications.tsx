@@ -15,6 +15,7 @@ import {
   useFocusEffect,
   useLocalSearchParams,
 } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const APPLICATION_STATUS_KEY =
@@ -311,6 +312,7 @@ export default function ApplicationsScreen() {
       return {
         backgroundColor: '#DCFCE7',
         color: '#166534',
+        icon: 'checkmark-circle',
       };
     }
 
@@ -318,6 +320,7 @@ export default function ApplicationsScreen() {
       return {
         backgroundColor: '#FEE2E2',
         color: '#991B1B',
+        icon: 'close-circle',
       };
     }
 
@@ -325,12 +328,14 @@ export default function ApplicationsScreen() {
       return {
         backgroundColor: '#DBEAFE',
         color: '#1D4ED8',
+        icon: 'calendar',
       };
     }
 
     return {
       backgroundColor: '#FEF3C7',
       color: '#92400E',
+      icon: 'time',
     };
   };
 
@@ -353,7 +358,7 @@ export default function ApplicationsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* HEADER */}
       <View style={styles.header}>
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>
@@ -385,8 +390,14 @@ export default function ApplicationsScreen() {
             }
           }}
         >
+          <Ionicons
+            name="arrow-back"
+            size={17}
+            color="#334155"
+          />
+
           <Text style={styles.backButtonText}>
-            ← Back
+            Back
           </Text>
         </Pressable>
       </View>
@@ -397,7 +408,7 @@ export default function ApplicationsScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Selected Opportunity */}
+        {/* SELECTED OPPORTUNITY */}
         {opportunityTitle && (
           <View
             style={
@@ -407,13 +418,11 @@ export default function ApplicationsScreen() {
             <View
               style={styles.selectedIcon}
             >
-              <Text
-                style={
-                  styles.selectedIconText
-                }
-              >
-                💼
-              </Text>
+              <Ionicons
+                name="briefcase-outline"
+                size={22}
+                color="#2563EB"
+              />
             </View>
 
             <View
@@ -434,52 +443,28 @@ export default function ApplicationsScreen() {
           </View>
         )}
 
-        {/* Summary */}
+        {/* SUMMARY */}
         <View style={styles.summaryRow}>
-          <View style={styles.summaryCard}>
-            <Text
-              style={styles.summaryNumber}
-            >
-              {totalApplications}
-            </Text>
+          <SummaryCard
+            icon="document-text-outline"
+            value={totalApplications}
+            label="Applications"
+          />
 
-            <Text
-              style={styles.summaryLabel}
-            >
-              Applications
-            </Text>
-          </View>
+          <SummaryCard
+            icon="checkmark-circle-outline"
+            value={shortlistedCount}
+            label="Shortlisted"
+          />
 
-          <View style={styles.summaryCard}>
-            <Text
-              style={styles.summaryNumber}
-            >
-              {shortlistedCount}
-            </Text>
-
-            <Text
-              style={styles.summaryLabel}
-            >
-              Shortlisted
-            </Text>
-          </View>
-
-          <View style={styles.summaryCard}>
-            <Text
-              style={styles.summaryNumber}
-            >
-              {interviewCount}
-            </Text>
-
-            <Text
-              style={styles.summaryLabel}
-            >
-              Interviews
-            </Text>
-          </View>
+          <SummaryCard
+            icon="calendar-outline"
+            value={interviewCount}
+            label="Interviews"
+          />
         </View>
 
-        {/* Filter buttons */}
+        {/* FILTERS */}
         <View
           style={styles.filterContainer}
         >
@@ -501,6 +486,17 @@ export default function ApplicationsScreen() {
                 setSelectedFilter(filter)
               }
             >
+              {selectedFilter === filter && (
+                <Ionicons
+                  name="checkmark"
+                  size={14}
+                  color="#FFFFFF"
+                  style={
+                    styles.filterCheck
+                  }
+                />
+              )}
+
               <Text
                 style={
                   selectedFilter === filter
@@ -514,7 +510,7 @@ export default function ApplicationsScreen() {
           ))}
         </View>
 
-        {/* Applications */}
+        {/* APPLICATIONS HEADER */}
         <View
           style={styles.sectionHeader}
         >
@@ -526,27 +522,30 @@ export default function ApplicationsScreen() {
               : 'Recent Applications'}
           </Text>
 
-          <Text style={styles.countText}>
-            {filteredApplications.length}
-          </Text>
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>
+              {filteredApplications.length}
+            </Text>
+          </View>
         </View>
 
+        {/* APPLICATIONS */}
         {filteredApplications.length ===
         0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>
-              📭
-            </Text>
+            <View style={styles.emptyIconContainer}>
+              <Ionicons
+                name="document-outline"
+                size={34}
+                color="#64748B"
+              />
+            </View>
 
-            <Text
-              style={styles.emptyTitle}
-            >
+            <Text style={styles.emptyTitle}>
               No applications yet
             </Text>
 
-            <Text
-              style={styles.emptyText}
-            >
+            <Text style={styles.emptyText}>
               {opportunityTitle
                 ? `No candidates have applied for "${opportunityTitle}" yet.`
                 : 'There are no applications to display.'}
@@ -567,7 +566,7 @@ export default function ApplicationsScreen() {
                     styles.applicationCard
                   }
                 >
-                  {/* Candidate */}
+                  {/* CANDIDATE */}
                   <View
                     style={styles.topRow}
                   >
@@ -626,6 +625,16 @@ export default function ApplicationsScreen() {
                         },
                       ]}
                     >
+                      <Ionicons
+                        name={
+                          statusStyle.icon as any
+                        }
+                        size={12}
+                        color={
+                          statusStyle.color
+                        }
+                      />
+
                       <Text
                         style={[
                           styles.statusText,
@@ -644,18 +653,26 @@ export default function ApplicationsScreen() {
                     style={styles.divider}
                   />
 
-                  {/* Bottom */}
+                  {/* BOTTOM */}
                   <View
                     style={styles.bottomRow}
                   >
-                    <Text
-                      style={
-                        styles.appliedText
-                      }
-                    >
-                      Applied{' '}
-                      {application.applied}
-                    </Text>
+                    <View style={styles.appliedContainer}>
+                      <Ionicons
+                        name="time-outline"
+                        size={14}
+                        color="#94A3B8"
+                      />
+
+                      <Text
+                        style={
+                          styles.appliedText
+                        }
+                      >
+                        Applied{' '}
+                        {application.applied}
+                      </Text>
+                    </View>
 
                     <Pressable
                       style={
@@ -681,10 +698,16 @@ export default function ApplicationsScreen() {
                       >
                         View Candidate
                       </Text>
+
+                      <Ionicons
+                        name="chevron-forward"
+                        size={14}
+                        color="#2563EB"
+                      />
                     </Pressable>
                   </View>
 
-                  {/* Actions */}
+                  {/* ACTIONS */}
                   <View
                     style={styles.actionRow}
                   >
@@ -701,6 +724,12 @@ export default function ApplicationsScreen() {
                             )
                           }
                         >
+                          <Ionicons
+                            name="checkmark-circle-outline"
+                            size={15}
+                            color="#166534"
+                          />
+
                           <Text
                             style={
                               styles.shortlistText
@@ -720,6 +749,12 @@ export default function ApplicationsScreen() {
                             )
                           }
                         >
+                          <Ionicons
+                            name="close-circle-outline"
+                            size={15}
+                            color="#991B1B"
+                          />
+
                           <Text
                             style={
                               styles.rejectText
@@ -744,6 +779,12 @@ export default function ApplicationsScreen() {
                             )
                           }
                         >
+                          <Ionicons
+                            name="calendar-outline"
+                            size={15}
+                            color="#1D4ED8"
+                          />
+
                           <Text
                             style={
                               styles.interviewText
@@ -763,6 +804,12 @@ export default function ApplicationsScreen() {
                             )
                           }
                         >
+                          <Ionicons
+                            name="close-circle-outline"
+                            size={15}
+                            color="#991B1B"
+                          />
+
                           <Text
                             style={
                               styles.rejectText
@@ -786,6 +833,12 @@ export default function ApplicationsScreen() {
                           )
                         }
                       >
+                        <Ionicons
+                          name="close-circle-outline"
+                          size={15}
+                          color="#991B1B"
+                        />
+
                         <Text
                           style={
                             styles.rejectText
@@ -809,6 +862,12 @@ export default function ApplicationsScreen() {
                           )
                         }
                       >
+                        <Ionicons
+                          name="refresh-outline"
+                          size={15}
+                          color="#92400E"
+                        />
+
                         <Text
                           style={
                             styles.reviewText
@@ -825,6 +884,40 @@ export default function ApplicationsScreen() {
           )
         )}
       </ScrollView>
+    </View>
+  );
+}
+
+function SummaryCard({
+  icon,
+  value,
+  label,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  value: number;
+  label: string;
+}) {
+  return (
+    <View style={styles.summaryCard}>
+      <View style={styles.summaryIcon}>
+        <Ionicons
+          name={icon}
+          size={18}
+          color="#2563EB"
+        />
+      </View>
+
+      <Text
+        style={styles.summaryNumber}
+      >
+        {value}
+      </Text>
+
+      <Text
+        style={styles.summaryLabel}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
@@ -875,6 +968,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     backgroundColor: '#F1F5F9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
 
   backButtonText: {
@@ -889,14 +985,14 @@ const styles = StyleSheet.create({
   },
 
   selectedOpportunity: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#EFF6FF',
     borderRadius: 14,
     padding: 14,
     marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: '#BFDBFE',
   },
 
   selectedIcon: {
@@ -909,10 +1005,6 @@ const styles = StyleSheet.create({
     marginRight: 11,
   },
 
-  selectedIconText: {
-    fontSize: 20,
-  },
-
   selectedInfo: {
     flex: 1,
   },
@@ -920,14 +1012,14 @@ const styles = StyleSheet.create({
   selectedLabel: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#6366F1',
+    color: '#2563EB',
     letterSpacing: 0.5,
   },
 
   selectedTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1E1B4B',
+    color: '#0F172A',
     marginTop: 3,
   },
 
@@ -941,9 +1033,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 14,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+  },
+
+  summaryIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 7,
   },
 
   summaryNumber: {
@@ -967,9 +1069,15 @@ const styles = StyleSheet.create({
 
   filterActive: {
     backgroundColor: '#2563EB',
-    paddingHorizontal: 15,
+    paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  filterCheck: {
+    marginRight: 4,
   },
 
   filterActiveText: {
@@ -1006,10 +1114,20 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
 
+  countBadge: {
+    minWidth: 28,
+    height: 28,
+    paddingHorizontal: 7,
+    borderRadius: 14,
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   countText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
+    fontWeight: '700',
+    color: '#475569',
   },
 
   applicationCard: {
@@ -1070,6 +1188,9 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 12,
     marginLeft: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
 
   statusText: {
@@ -1089,6 +1210,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
 
+  appliedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+
   appliedText: {
     fontSize: 12,
     color: '#64748B',
@@ -1099,6 +1226,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
 
   viewButtonText: {
@@ -1119,6 +1249,9 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 9,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 5,
   },
 
   shortlistText: {
@@ -1133,6 +1266,9 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 9,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 5,
   },
 
   rejectText: {
@@ -1147,6 +1283,9 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 9,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 5,
   },
 
   interviewText: {
@@ -1161,6 +1300,9 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 9,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 5,
   },
 
   reviewText: {
@@ -1178,9 +1320,14 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
 
-  emptyIcon: {
-    fontSize: 38,
-    marginBottom: 10,
+  emptyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
 
   emptyTitle: {

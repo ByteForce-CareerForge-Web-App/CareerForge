@@ -1,882 +1,1794 @@
-import { router } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useRef, useState } from "react";
+
 import {
-  Pressable,
+  Animated,
+  Easing,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
+
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 export default function StudentDashboard() {
-  const employabilityScore = 82;
-  const profileCompletion = 80;
+  const router = useRouter();
 
-  const getScoreColor = (score: number) => {
-    if (score >= 70) return '#22C55E';
-    if (score >= 50) return '#EAB308';
-    return '#EF4444';
+  // Frontend-only dashboard data. Backend/API loading is intentionally removed.
+  const firstName = "Student";
+  const profileCompletion = 80;
+  const aiScore = 82;
+  const aiLevel = "Strong Potential";
+  const skillsCount = 6;
+  const careerPathCount = 3;
+  const roadmapStepCount = 5;
+  const skillGapCount = 2;
+  const careerGoalsCount = 3;
+
+  const recommendedOpportunities = [
+    {
+      id: 1,
+      title: "Junior Software Developer",
+      company_name: "TechNova",
+      matchScore: 92,
+    },
+    {
+      id: 2,
+      title: "IT Support Intern",
+      company_name: "DigitalCore",
+      matchScore: 86,
+    },
+    {
+      id: 3,
+      title: "Frontend Developer Intern",
+      company_name: "FutureLabs",
+      matchScore: 81,
+    },
+  ];
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const heroAnimation = useRef(new Animated.Value(0)).current;
+  const contentAnimation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    heroAnimation.setValue(0);
+    contentAnimation.setValue(0);
+
+    Animated.parallel([
+      Animated.timing(heroAnimation, {
+        toValue: 1,
+        duration: 750,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(contentAnimation, {
+        toValue: 1,
+        duration: 900,
+        delay: 150,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [heroAnimation, contentAnimation]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 700);
   };
 
-  const scoreColor = getScoreColor(employabilityScore);
-  const progressColor = getScoreColor(profileCompletion);
+    const handleLogout = () => {
+    router.replace("/login");
+  };
+
+  const scoreColor =
+    aiScore >= 70 ? "#22C55E" : aiScore >= 50 ? "#F59E0B" : "#EF4444";
+
+  const progressColor =
+    profileCompletion >= 70
+      ? "#22C55E"
+      : profileCompletion >= 50
+        ? "#F59E0B"
+        : "#EF4444";
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Welcome back 👋</Text>
-          <Text style={styles.name}>Student</Text>
-        </View>
+    <View style={styles.container}>
+      {/* Decorative background elements */}
+      <View
+        pointerEvents="none"
+        style={styles.backgroundShapeOne}
+      />
 
-        <View style={styles.headerButtons}>
-          {/* Notifications */}
-          <Pressable
-            style={styles.notificationButton}
-            onPress={() => router.push('/student/notification')}
-          >
-            <Text style={styles.notificationIcon}>🔔</Text>
-          </Pressable>
+      <View
+        pointerEvents="none"
+        style={styles.backgroundShapeTwo}
+      />
 
-          {/* Profile */}
-          <Pressable
+      <View
+        pointerEvents="none"
+        style={styles.backgroundShapeThree}
+      />
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#2457E6"
+          />
+        }
+      >
+        {/* HEADER */}
+        <View style={styles.header}>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.eyebrow}>
+              CAREERFORGE
+            </Text>
+
+            <Text style={styles.greeting}>
+              Good morning, {firstName}.
+            </Text>
+
+            <Text style={styles.headerSubtitle}>
+              Your career intelligence starts here.
+            </Text>
+          </View>
+
+          <TouchableOpacity
             style={styles.profileButton}
-            onPress={() => router.push('/student/profile')}
+            activeOpacity={0.8}
+            onPress={() =>
+              router.push("/student/profile")
+            }
           >
-            <Text style={styles.profileIcon}>👤</Text>
-          </Pressable>
-        </View>
-      </View>
+            <View style={styles.profileAvatar}>
+              <Text style={styles.profileInitial}>
+                {firstName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
 
-      {/* Employability Score */}
-      <View style={styles.scoreCard}>
-        <View>
-          <Text style={styles.scoreLabel}>Employability Score</Text>
-
-          <Text style={styles.score}>
-            {employabilityScore}%
-          </Text>
-
-          <Text style={styles.scoreDescription}>
-            You're on the right track!
-          </Text>
+            <View style={styles.profileDot} />
+          </TouchableOpacity>
         </View>
 
-        <View
+        {/* AI HERO */}
+        <Animated.View
           style={[
-            styles.scoreCircle,
+            styles.heroWrapper,
             {
-              borderColor: scoreColor,
+              opacity: heroAnimation,
+              transform: [
+                {
+                  translateY:
+                    heroAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [35, 0],
+                    }),
+                },
+              ],
             },
           ]}
         >
-          <Text style={styles.scoreCircleText}>
-            {employabilityScore}
-          </Text>
-
-          <Text
-            style={[
-              styles.scoreCirclePercent,
-              {
-                color: scoreColor,
-              },
-            ]}
-          >
-            %
-          </Text>
-        </View>
-      </View>
-
-      {/* Career Credits */}
-      <View style={styles.creditCard}>
-        <View>
-          <Text style={styles.creditLabel}>
-            Career Credits
-          </Text>
-
-          <Text style={styles.creditAmount}>
-            240 ⭐
-          </Text>
-        </View>
-
-        <Text style={styles.creditDescription}>
-          Keep completing activities to earn more.
-        </Text>
-      </View>
-
-      {/* Quick Actions */}
-      <Text style={styles.sectionTitle}>
-        Quick Actions
-      </Text>
-
-      <View style={styles.actionGrid}>
-
-        {/* AI Career Assistant */}
-        <Pressable
-          style={styles.actionCard}
-          onPress={() =>
-            router.push('/student/ai-career-assistant')
-          }
-        >
-          <Text style={styles.actionIcon}>🤖</Text>
-
-          <Text style={styles.actionTitle}>
-            AI Career
-          </Text>
-
-          <Text style={styles.actionTitle}>
-            Assistant
-          </Text>
-        </Pressable>
-
-        {/* Career Roadmap */}
-        <Pressable
-          style={styles.actionCard}
-          onPress={() =>
-            router.push('/student/career-roadmap')
-          }
-        >
-          <Text style={styles.actionIcon}>🧭</Text>
-
-          <Text style={styles.actionTitle}>
-            Career
-          </Text>
-
-          <Text style={styles.actionTitle}>
-            Roadmap
-          </Text>
-        </Pressable>
-
-
-        {/* Find Opportunities */}
-        <Pressable
-          style={styles.actionCard}
-          onPress={() =>
-            router.push('/student/opportunities')
-          }
-        >
-          <Text style={styles.actionIcon}>🔍</Text>
-
-          <Text style={styles.actionTitle}>
-            Find
-          </Text>
-
-          <Text style={styles.actionTitle}>
-            Opportunities
-          </Text>
-        </Pressable>
-
-        {/* My Applications */}
-        <Pressable
-          style={styles.actionCard}
-          onPress={() =>
-            router.push('/student/applications')
-          }
-        >
-          <Text style={styles.actionIcon}>📋</Text>
-
-          <Text style={styles.actionTitle}>
-            My
-          </Text>
-
-          <Text style={styles.actionTitle}>
-            Applications
-          </Text>
-        </Pressable>
-
-        {/* Saved Opportunities */}
-          <Pressable
-            style={styles.actionCard}
+          <TouchableOpacity
+            activeOpacity={0.94}
             onPress={() =>
-              router.push('/student/saved-opportunities')
+              router.push(
+                "/student/employability-analysis"
+              )
+            }
+            style={styles.aiHero}
+          >
+            {/* Hero decorations */}
+            <View style={styles.heroGlowOne} />
+            <View style={styles.heroGlowTwo} />
+
+            <View style={styles.heroTopRow}>
+              <View style={styles.aiBadge}>
+                <View style={styles.aiBadgeDot} />
+
+                <Text style={styles.aiBadgeText}>
+                  AI POWERED
+                </Text>
+              </View>
+
+              <View style={styles.heroSparkle}>
+                <Ionicons
+                  name="sparkles"
+                  size={23}
+                  color="#FFFFFF"
+                />
+              </View>
+            </View>
+
+            <Text style={styles.heroTitle}>
+              CareerForge
+            </Text>
+
+            <Text style={styles.heroSubtitle}>
+              Employability Intelligence
+            </Text>
+
+            <>
+              <View style={styles.scoreArea}>
+                <View
+                  style={[
+                    styles.scoreRingOuter,
+                    { borderColor: scoreColor },
+                  ]}
+                >
+                  <View style={styles.scoreRingInner}>
+                    <Text style={styles.scoreNumber}>
+                      {aiScore}
+                      <Text style={styles.scorePercent}>%</Text>
+                    </Text>
+
+                    <Text style={styles.scoreLabel}>
+                      EMPLOYABILITY
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.scoreMessage}>
+                  <Text style={styles.scoreLevel}>{aiLevel}</Text>
+
+                  <Text
+                    style={styles.scoreDescription}
+                    numberOfLines={3}
+                  >
+                    Your current profile shows strong potential. Keep improving
+                    your skills and experience to move closer to your target career.
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.intelligenceStats}>
+                <IntelligenceStat
+                  icon="flash"
+                  value={String(skillsCount)}
+                  label="Skills"
+                />
+
+                <View style={styles.statDivider} />
+
+                <IntelligenceStat
+                  icon="git-network"
+                  value={String(careerPathCount)}
+                  label="Career Fits"
+                />
+
+                <View style={styles.statDivider} />
+
+                <IntelligenceStat
+                  icon="map"
+                  value={String(roadmapStepCount)}
+                  label="Roadmap"
+                />
+
+                <View style={styles.statDivider} />
+
+                <IntelligenceStat
+                  icon="alert-circle"
+                  value={String(skillGapCount)}
+                  label="Gaps"
+                />
+              </View>
+
+              <View style={styles.heroCTA}>
+                <Text style={styles.heroCTAText}>
+                  VIEW FULL ANALYSIS
+                </Text>
+
+                <View style={styles.heroCTAIcon}>
+                  <Ionicons
+                    name="arrow-forward"
+                    size={20}
+                    color="#2457E6"
+                  />
+                </View>
+              </View>
+            </>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* CAREER CENTRE */}
+        <Animated.View
+          style={[
+            styles.contentSection,
+            {
+              opacity: contentAnimation,
+              transform: [
+                {
+                  translateY:
+                    contentAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [25, 0],
+                    }),
+                },
+              ],
+            },
+          ]}
+        >
+          <SectionHeading
+            eyebrow="YOUR SPACE"
+            title="Career Centre"
+            subtitle="Everything you need to move forward."
+          />
+
+          <View style={styles.careerGrid}>
+            <CareerAction
+              icon="map"
+              title="Career Roadmap"
+              subtitle="Your next moves"
+              gradient="blue"
+              onPress={() =>
+                router.push(
+                  "/student/career-roadmap"
+                )
+              }
+            />
+
+            <CareerAction
+              icon="briefcase"
+              title="Opportunities"
+              subtitle="Jobs & saved"
+              gradient="orange"
+              onPress={() =>
+                router.push(
+                  "/student/opportunities"
+                )
+              }
+            />
+
+            <CareerAction
+              icon="git-network"
+              title="Career Paths"
+              subtitle="Explore your fit"
+              gradient="purple"
+              onPress={() =>
+                router.push(
+                  "/student/career-pathways"
+                )
+              }
+            />
+
+            <CareerAction
+              icon="flag"
+              title="Career Goals"
+              subtitle={`${careerGoalsCount} selected`}
+              gradient="pink"
+              onPress={() =>
+                router.push(
+                  "/student/career-goals"
+                )
+              }
+            />
+ 
+            <CareerAction
+              icon="document-text"
+              title="My Applications"
+              subtitle="Track applications"
+              gradient="blue"
+              onPress={() => router.push("/student/applications")}
+            />
+
+            <CareerAction
+              icon="sparkles"
+              title="AI Career Assistant"
+              subtitle="Get career guidance"
+              gradient="purple"
+              onPress={() => router.push("/student/ai-career-assistant")}
+            />
+
+            <CareerAction
+              icon="people"
+              title="Social Feed"
+              subtitle="Connect & share"
+              gradient="blue"
+              onPress={() => router.push("/student/social-feed")}
+            />
+          </View>
+
+          {/* RECOMMENDED OPPORTUNITIES */}
+          {recommendedOpportunities.length > 0 && (
+            <>
+              <SectionHeading
+                eyebrow="MATCHED FOR YOU"
+                title="Recommended Opportunities"
+                subtitle="Based on your current skills."
+                actionLabel="View all"
+                onAction={() =>
+                  router.push(
+                    "/student/opportunities"
+                  )
+                }
+              />
+
+              <View style={styles.opportunityList}>
+                {recommendedOpportunities.map(
+                  (opportunity) => (
+                    <TouchableOpacity
+                      key={opportunity.id}
+                      style={styles.opportunityCard}
+                      activeOpacity={0.9}
+                      onPress={() =>
+                        router.push({
+                          pathname:
+                            "/student/opportunity-details",
+                          params: {
+                            id: String(
+                              opportunity.id
+                            ),
+                          },
+                        })
+                      }
+                    >
+                      <View
+                        style={
+                          styles.opportunityIcon
+                        }
+                      >
+                        <Ionicons
+                          name="briefcase"
+                          size={24}
+                          color="#2457E6"
+                        />
+                      </View>
+
+                      <View
+                        style={
+                          styles.opportunityContent
+                        }
+                      >
+                        <Text
+                          style={
+                            styles.opportunityTitle
+                          }
+                          numberOfLines={1}
+                        >
+                          {opportunity.title}
+                        </Text>
+
+                        <Text
+                          style={
+                            styles.opportunityCompany
+                          }
+                          numberOfLines={1}
+                        >
+                          {opportunity.company_name ||
+                            "CareerForge Opportunity"}
+                        </Text>
+
+                        <View
+                          style={
+                            styles.matchRow
+                          }
+                        >
+                          <View
+                            style={
+                              styles.matchTrack
+                            }
+                          >
+                            <View
+                              style={[
+                                styles.matchFill,
+                                {
+                                  width: `${Math.min(
+                                    opportunity.matchScore,
+                                    100
+                                  )}%`,
+                                },
+                              ]}
+                            />
+                          </View>
+
+                          <Text
+                            style={
+                              styles.matchText
+                            }
+                          >
+                            {opportunity.matchScore}%
+                            match
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Ionicons
+                        name="chevron-forward"
+                        size={23}
+                        color="#94A3B8"
+                      />
+                    </TouchableOpacity>
+                  )
+                )}
+              </View>
+            </>
+          )}
+
+          {/* PROGRESS */}
+          <SectionHeading
+            eyebrow="YOUR MOMENTUM"
+            title="Career Progress"
+            subtitle="Small steps build your future."
+          />
+
+          <View style={styles.progressCard}>
+            <View style={styles.progressTop}>
+              <View>
+                <Text style={styles.progressTitle}>
+                  Profile strength
+                </Text>
+
+                <Text style={styles.progressSubtitle}>
+                  Keep building your professional identity.
+                </Text>
+              </View>
+
+              <Text style={[styles.progressPercentage, { color: progressColor }]}>
+                {profileCompletion}%
+              </Text>
+            </View>
+
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${profileCompletion}%`,
+                    backgroundColor: progressColor,
+                  },
+                ]}
+              />
+            </View>
+
+            <View style={styles.progressBottom}>
+              <View style={styles.progressStatus}>
+                <Ionicons
+                  name={
+                    profileCompletion >= 80
+                      ? "checkmark-circle"
+                      : "trending-up"
+                  }
+                  size={20}
+                  color="#2457E6"
+                />
+
+                <Text style={styles.progressStatusText}>
+                  {profileCompletion >= 80
+                    ? "Strong profile"
+                    : "Keep improving"}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() =>
+                  router.push("/student/profile")
+                }
+              >
+                <Text style={styles.progressAction}>
+                  Improve →
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* CREDITS */}
+          <View style={styles.creditsCard}>
+            <View style={styles.creditsIcon}>
+              <Ionicons
+                name="diamond"
+                size={27}
+                color="#FFFFFF"
+              />
+            </View>
+
+            <View style={styles.creditsText}>
+              <Text style={styles.creditsEyebrow}>
+                CAREER CREDITS
+              </Text>
+
+              <Text style={styles.creditsTitle}>
+                Keep building momentum
+              </Text>
+            </View>
+
+            <Text style={styles.creditsValue}>
+              —
+            </Text>
+          </View>
+
+          {/* FINAL CTA */}
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={styles.finalAICTA}
+            onPress={() =>
+              router.push(
+                "/student/ai-career-assistant"
+              )
             }
           >
-            <Text style={styles.actionIcon}>🔖</Text>
+            <View style={styles.finalAIIcon}>
+              <Ionicons
+                name="sparkles"
+                size={28}
+                color="#FFFFFF"
+              />
+            </View>
 
-            <Text style={styles.actionTitle}>
-              Saved
-            </Text>
+            <View style={styles.finalAIText}>
+              <Text style={styles.finalAITitle}>
+                Need career guidance?
+              </Text>
 
-            <Text style={styles.actionTitle}>
-              Opportunities
-            </Text>
-          </Pressable>
+              <Text style={styles.finalAISubtitle}>
+                Talk to your CareerForge AI Assistant.
+              </Text>
+            </View>
 
-        {/* Career Goals */}
-        <Pressable
-          style={styles.actionCard}
-          onPress={() =>
-            router.push('/student/career-goals')
-          }
-        >
-          <Text style={styles.actionIcon}>🎯</Text>
+            <Ionicons
+              name="arrow-forward"
+              size={25}
+              color="#FFFFFF"
+            />
+          </TouchableOpacity>
 
-          <Text style={styles.actionTitle}>
-            Career
-          </Text>
-
-          <Text style={styles.actionTitle}>
-            Goals
-          </Text>
-        </Pressable>
-
-        {/* Connections */}
-        <Pressable
-          style={styles.actionCard}
-          onPress={() =>
-            router.push('/student/connections')
-          }
-        >
-          <Text style={styles.actionIcon}>🤝</Text>
-
-          <Text style={styles.actionTitle}>
-            My
-          </Text>
-
-          <Text style={styles.actionTitle}>
-            Connections
-          </Text>
-        </Pressable>
-
-        {/* Messages */}
-        <Pressable
-          style={styles.actionCard}
-          onPress={() =>
-            router.push('/student/messages')
-          }
-        >
-          <Text style={styles.actionIcon}>💬</Text>
-
-          <Text style={styles.actionTitle}>
-            My
-          </Text>
-
-          <Text style={styles.actionTitle}>
-            Messages
-          </Text>
-        </Pressable>
-
-        {/* Social Feed */}
-        <Pressable
-          style={styles.actionCard}
-          onPress={() =>
-            router.push('/student/social-feed')
-          }
-        >
-          <Text style={styles.actionIcon}>📰</Text>
-
-          <Text style={styles.actionTitle}>
-            Social
-          </Text>
-
-          <Text style={styles.actionTitle}>
-            Feed
-          </Text>
-        </Pressable>
-
-        {/* Career Pathways */}
-        <Pressable
-          style={styles.actionCard}
-          onPress={() =>
-            router.push('/student/career-pathways')
-          }
-        >
-          <Text style={styles.actionIcon}>🧭</Text>
-
-          <Text style={styles.actionTitle}>
-            Career
-          </Text>
-
-          <Text style={styles.actionTitle}>
-            Pathways
-          </Text>
-        </Pressable>
-      </View>
-
-
-             {/* My Career Paths + Events */}
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 25,
-        }}
-      >
-        {/* My Career Paths */}
-        <Pressable
-          style={{
-            width: '48%',
-            minHeight: 120,
-            backgroundColor: '#FFFFFF',
-            borderRadius: 20,
-            padding: 18,
-            borderWidth: 1,
-            borderColor: '#D9E1EA',
-            justifyContent: 'center',
-            shadowColor: '#0B1F3A',
-            shadowOffset: {
-              width: 0,
-              height: 3,
-            },
-            shadowOpacity: 0.07,
-            shadowRadius: 7,
-            elevation: 2,
-          }}
-          onPress={() =>
-            router.push('/student/my-career-paths')
-          }
-        >
-          <Text style={styles.actionIcon}>⭐</Text>
-
-          <Text style={styles.actionTitle}>
-            My Career
-          </Text>
-
-          <Text style={styles.actionTitle}>
-            Paths
-          </Text>
-        </Pressable>
-
-        {/* Events */}
-        <Pressable
-          style={{
-            width: '48%',
-            minHeight: 120,
-            backgroundColor: '#FFFFFF',
-            borderRadius: 20,
-            padding: 18,
-            borderWidth: 1,
-            borderColor: '#D9E1EA',
-            justifyContent: 'center',
-            shadowColor: '#0B1F3A',
-            shadowOffset: {
-              width: 0,
-              height: 3,
-            },
-            shadowOpacity: 0.07,
-            shadowRadius: 7,
-            elevation: 2,
-          }}
-          onPress={() =>
-            router.push('/student/events')
-          }
-        >
-          <Text style={styles.actionIcon}>📅</Text>
-
-          <Text style={styles.actionTitle}>
-            Events
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* Recommended Opportunities */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>
-          Recommended Opportunities
-        </Text>
-
-        <Pressable
-          onPress={() =>
-            router.push('/student/opportunities')
-          }
-        >
-          <Text style={styles.viewAll}>
-            View All
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* Opportunity 1 */}
-      <Pressable
-        style={styles.opportunityCard}
-        onPress={() =>
-          router.push('/student/opportunities')
-        }
-      >
-        <View style={styles.opportunityIcon}>
-          <Text>💻</Text>
-        </View>
-
-        <View style={styles.opportunityInfo}>
-          <Text style={styles.opportunityTitle}>
-            Junior Software Developer
-          </Text>
-
-          <Text style={styles.company}>
-            Technology Solutions
-          </Text>
-
-          <Text style={styles.location}>
-            📍 Durban • Full Time
-          </Text>
-        </View>
-      </Pressable>
-
-      {/* Opportunity 2 */}
-      <Pressable
-        style={styles.opportunityCard}
-        onPress={() =>
-          router.push('/student/opportunities')
-        }
-      >
-        <View style={styles.opportunityIcon}>
-          <Text>📊</Text>
-        </View>
-
-        <View style={styles.opportunityInfo}>
-          <Text style={styles.opportunityTitle}>
-            Graduate Data Analyst
-          </Text>
-
-          <Text style={styles.company}>
-            Digital Analytics Group
-          </Text>
-
-          <Text style={styles.location}>
-            📍 Johannesburg • Hybrid
-          </Text>
-        </View>
-      </Pressable>
-
-      {/* Opportunity 3 */}
-      <Pressable
-        style={styles.opportunityCard}
-        onPress={() =>
-          router.push('/student/opportunities')
-        }
-      >
-        <View style={styles.opportunityIcon}>
-          <Text>📈</Text>
-        </View>
-
-        <View style={styles.opportunityInfo}>
-          <Text style={styles.opportunityTitle}>
-            Business Analyst Intern
-          </Text>
-
-          <Text style={styles.company}>
-            Future Consulting
-          </Text>
-
-          <Text style={styles.location}>
-            📍 Cape Town • Internship
-          </Text>
-        </View>
-      </Pressable>
-
-      {/* Career Progress */}
-      <Text style={styles.sectionTitle}>
-        Career Progress
-      </Text>
-
-      <View style={styles.progressCard}>
-        <View style={styles.progressRow}>
-          <Text style={styles.progressLabel}>
-            Profile Completion
-          </Text>
-
-          <Text
-            style={[
-              styles.progressValue,
-              {
-                color: progressColor,
-              },
-            ]}
-          >
-            {profileCompletion}%
-          </Text>
-        </View>
-
-        <View style={styles.progressBackground}>
-          <View
-            style={[
-              styles.progressFill,
-              {
-                width: `${profileCompletion}%`,
-                backgroundColor: progressColor,
-              },
-            ]}
-          />
-        </View>
-
-        <Text style={styles.progressHint}>
-          Complete your profile to improve
-          opportunity matches.
-        </Text>
-      </View>
-
-      {/* Logout */}
-      <Pressable
+          <TouchableOpacity
+        activeOpacity={0.85}
         style={styles.logoutButton}
-        onPress={() =>
-          router.replace('/login')
-        }
+        onPress={handleLogout}
       >
-        <Text style={styles.logoutText}>
+        <Ionicons
+          name="log-out-outline"
+          size={21}
+          color="#EF4444"
+        />
+
+        <Text style={styles.logoutButtonText}>
           Logout
         </Text>
-      </Pressable>
-    </ScrollView>
+      </TouchableOpacity>
+
+      <View style={styles.bottomSpacer} />
+        </Animated.View>
+      </ScrollView>
+
+      {/* STICKY NAVIGATION */}
+      <View style={styles.bottomNavShadow}>
+        <View style={styles.bottomNav}>
+          <BottomNavItem
+            icon="home"
+            label="Home"
+            active
+            onPress={() => {}}
+          />
+
+          <BottomNavItem
+            icon="compass"
+            label="Explore"
+            onPress={() =>
+              router.push("/student/opportunities")
+            }
+          />
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.aiNavButton}
+            onPress={() =>
+              router.push(
+                "/student/employability-analysis"
+              )
+            }
+          >
+            <View style={styles.aiNavInner}>
+              <Ionicons
+                name="sparkles"
+                size={27}
+                color="#FFFFFF"
+              />
+            </View>
+
+            <Text style={styles.aiNavLabel}>
+              Career AI
+            </Text>
+          </TouchableOpacity>
+
+          <BottomNavItem
+            icon="chatbubbles"
+            label="Messages"
+            onPress={() =>
+              router.push("/student/messages")
+            }
+          />
+
+          <BottomNavItem
+            icon="person"
+            label="Profile"
+            onPress={() =>
+              router.push("/student/profile")
+            }
+          />
+        </View>
+      </View>
+    </View>
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/* COMPONENTS                                                                */
+/* -------------------------------------------------------------------------- */
+
+function SectionHeading({
+  eyebrow,
+  title,
+  subtitle,
+  actionLabel,
+  onAction,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <View style={styles.sectionHeading}>
+      <View style={styles.sectionHeadingText}>
+        <Text style={styles.sectionEyebrow}>
+          {eyebrow}
+        </Text>
+
+        <Text style={styles.sectionTitle}>
+          {title}
+        </Text>
+
+        <Text style={styles.sectionSubtitle}>
+          {subtitle}
+        </Text>
+      </View>
+
+      {actionLabel && onAction && (
+        <TouchableOpacity
+          style={styles.sectionAction}
+          onPress={onAction}
+        >
+          <Text style={styles.sectionActionText}>
+            {actionLabel}
+          </Text>
+
+          <Ionicons
+            name="arrow-forward"
+            size={17}
+            color="#2457E6"
+          />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+function IntelligenceStat({
+  icon,
+  value,
+  label,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  value: string;
+  label: string;
+}) {
+  return (
+    <View style={styles.intelligenceStat}>
+      <Ionicons
+        name={icon}
+        size={19}
+        color="#DCE7FF"
+      />
+
+      <Text style={styles.intelligenceValue}>
+        {value}
+      </Text>
+
+      <Text style={styles.intelligenceLabel}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function CareerAction({
+  icon,
+  title,
+  subtitle,
+  gradient,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle: string;
+  gradient: "blue" | "purple" | "orange" | "pink";
+  onPress: () => void;
+}) {
+  const iconBackground = {
+    blue: "#E8F0FF",
+    purple: "#F0E9FF",
+    orange: "#FFF1E3",
+    pink: "#FDEAF5",
+  }[gradient];
+
+  const iconColor = {
+    blue: "#2457E6",
+    purple: "#8A42D8",
+    orange: "#F28B30",
+    pink: "#D83B9C",
+  }[gradient];
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.88}
+      onPress={onPress}
+      style={styles.careerAction}
+    >
+      <View
+        style={[
+          styles.careerActionIcon,
+          {
+            backgroundColor: iconBackground,
+          },
+        ]}
+      >
+        <Ionicons
+          name={icon}
+          size={27}
+          color={iconColor}
+        />
+      </View>
+
+      <Text
+        style={styles.careerActionTitle}
+        numberOfLines={2}
+      >
+        {title}
+      </Text>
+
+      <Text style={styles.careerActionSubtitle}>
+        {subtitle}
+      </Text>
+
+      <View style={styles.careerArrow}>
+        <Ionicons
+          name="arrow-forward"
+          size={18}
+          color="#64748B"
+        />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function BottomNavItem({
+  icon,
+  label,
+  active = false,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  active?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={onPress}
+      style={styles.bottomNavItem}
+    >
+      <Ionicons
+        name={icon}
+        size={25}
+        color={active ? "#2457E6" : "#7B879B"}
+      />
+
+      <Text
+        style={[
+          styles.bottomNavLabel,
+          active && styles.bottomNavLabelActive,
+        ]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* STYLES                                                                     */
+/* -------------------------------------------------------------------------- */
+
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-
   container: {
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 45,
+    flex: 1,
+    backgroundColor: "#F7F9FD",
   },
 
-  /* Header */
-  header: {
-    backgroundColor: '#416697',
-    borderRadius: 24,
+  scrollView: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    paddingTop: 58,
     paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginBottom: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#1E3A5F',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
+    paddingBottom: 30,
+  },
+
+  /* ---------------------------------------------------------------------- */
+  /* BACKGROUND                                                             */
+  /* ---------------------------------------------------------------------- */
+
+  backgroundShapeOne: {
+    position: "absolute",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: "#EAF1FF",
+    top: -100,
+    right: -100,
+  },
+
+  backgroundShapeTwo: {
+    position: "absolute",
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: "#F7E9FA",
+    top: 480,
+    left: -110,
+  },
+
+  backgroundShapeThree: {
+    position: "absolute",
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "#FFF0DF",
+    top: 950,
+    right: -70,
+  },
+
+  /* ---------------------------------------------------------------------- */
+  /* HEADER                                                                 */
+  /* ---------------------------------------------------------------------- */
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 26,
+  },
+
+  headerTextContainer: {
+    flex: 1,
+    paddingRight: 15,
+  },
+
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 2.4,
+    color: "#2457E6",
+    marginBottom: 7,
   },
 
   greeting: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 5,
-    letterSpacing: 0.2,
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "900",
+    color: "#172033",
   },
 
-  name: {
-    fontSize: 27,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-  },
-
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-
-  notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 15,
-    backgroundColor: '#F3F0FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E9E3FF',
-  },
-
-  notificationIcon: {
-    fontSize: 20,
+  headerSubtitle: {
+    marginTop: 7,
+    fontSize: 15,
+    lineHeight: 22,
+    color: "#64748B",
+    fontWeight: "500",
   },
 
   profileButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 15,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
+    position: "relative",
   },
 
-  profileIcon: {
+  profileAvatar: {
+    width: 57,
+    height: 57,
+    borderRadius: 20,
+    backgroundColor: "#2457E6",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#2457E6",
+    shadowOpacity: 0.22,
+    shadowRadius: 13,
+    shadowOffset: {
+      width: 0,
+      height: 7,
+    },
+    elevation: 7,
+  },
+
+  profileInitial: {
+    color: "#FFFFFF",
     fontSize: 21,
+    fontWeight: "900",
   },
 
-  /* Employability Score */
-  scoreCard: {
-    backgroundColor: '#1e5397',
-    borderRadius: 22,
-    padding: 22,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
+  profileDot: {
+    position: "absolute",
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#F28B30",
+    right: -2,
+    bottom: -2,
+    borderWidth: 3,
+    borderColor: "#F7F9FD",
+  },
+
+  /* ---------------------------------------------------------------------- */
+  /* AI HERO                                                                */
+  /* ---------------------------------------------------------------------- */
+
+  heroWrapper: {
+    marginBottom: 38,
+  },
+
+  aiHero: {
+    minHeight: 470,
+    borderRadius: 34,
+    padding: 25,
+    overflow: "hidden",
+    backgroundColor: "#173FBD",
+    shadowColor: "#2457E6",
+    shadowOpacity: 0.25,
+    shadowRadius: 28,
+    shadowOffset: {
+      width: 0,
+      height: 15,
+    },
+    elevation: 12,
+  },
+
+  heroGlowOne: {
+    position: "absolute",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: "#7A42D8",
+    opacity: 0.55,
+    top: -110,
+    right: -70,
+  },
+
+  heroGlowTwo: {
+    position: "absolute",
+    width: 210,
+    height: 210,
+    borderRadius: 105,
+    backgroundColor: "#D83B9C",
+    opacity: 0.32,
+    bottom: -110,
+    left: -80,
+  },
+
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  aiBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 100,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+  },
+
+  aiBadgeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#FFAA52",
+    marginRight: 8,
+  },
+
+  aiBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+
+  heroSparkle: {
+    width: 45,
+    height: 45,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.13)",
+  },
+
+  heroTitle: {
+    marginTop: 28,
+    color: "#FFFFFF",
+    fontSize: 34,
+    lineHeight: 39,
+    fontWeight: "900",
+    letterSpacing: -0.7,
+  },
+
+  heroSubtitle: {
+    marginTop: 3,
+    color: "#DDE7FF",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+
+  scoreArea: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 28,
+  },
+
+  scoreRingOuter: {
+    width: 174,
+    height: 174,
+    borderRadius: 87,
+    borderWidth: 12,
+    borderColor: "#F28B30",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+
+  scoreRingInner: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  scoreNumber: {
+    color: "#FFFFFF",
+    fontSize: 48,
+    lineHeight: 53,
+    fontWeight: "900",
+    letterSpacing: -2,
+  },
+
+  scorePercent: {
+    fontSize: 25,
+    letterSpacing: 0,
   },
 
   scoreLabel: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 5,
+    marginTop: 4,
+    color: "#C8D8FF",
+    fontSize: 10,
+    letterSpacing: 1.5,
+    fontWeight: "900",
   },
 
-  score: {
-    color: '#FFFFFF',
-    fontSize: 34,
-    fontWeight: '800',
+  scoreMessage: {
+    flex: 1,
+    paddingLeft: 20,
+  },
+
+  scoreLevel: {
+    color: "#FFFFFF",
+    fontSize: 21,
+    lineHeight: 26,
+    fontWeight: "900",
+    marginBottom: 8,
   },
 
   scoreDescription: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    marginTop: 3,
-  },
-
-  scoreCircle: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-    borderWidth: 6,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  scoreCircleText: {
-    color: '#0B1F3A',
-    fontSize: 22,
-    fontWeight: '800',
-  },
-
-  scoreCirclePercent: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-
-  /* Career Credits */
-  creditCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#D9E1EA',
-    marginBottom: 25,
-  },
-
-  creditLabel: {
-    color: '#0B1F3A',
+    color: "#D8E3FF",
     fontSize: 13,
-    fontWeight: '600',
+    lineHeight: 20,
+    fontWeight: "500",
   },
 
-  creditAmount: {
-    color: '#0B1F3A',
-    fontSize: 25,
-    fontWeight: 'bold',
-    marginTop: 3,
+  intelligenceStats: {
+    marginTop: 28,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
 
-  creditDescription: {
-    color: '#64748B',
-    fontSize: 12,
-    marginTop: 7,
-  },
-
-  /* Sections */
-  sectionTitle: {
-    color: '#0B1F3A',
-    fontSize: 19,
-    fontWeight: '800',
-    marginBottom: 13,
-  },
-
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  viewAll: {
-    color: '#0B1F3A',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-
-  /* Quick Actions */
-  actionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 25,
-  },
-
-  actionCard: {
-    width: '48%',
-    minHeight: 120,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 13,
-    borderWidth: 1,
-    borderColor: '#D9E1EA',
-    justifyContent: 'center',
-    shadowColor: '#0B1F3A',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.07,
-    shadowRadius: 7,
-    elevation: 2,
-  },
-
-    careerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 25,
-  },
-
-  smallActionCard: {
-    width: '48%',
-    minHeight: 120,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#D9E1EA',
-    justifyContent: 'center',
-    shadowColor: '#0B1F3A',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.07,
-    shadowRadius: 7,
-    elevation: 2,
-  },
-
-  actionIcon: {
-    fontSize: 28,
-    marginBottom: 10,
-  },
-
-  actionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0B1F3A',
-    lineHeight: 19,
-  },
-
-  /* Opportunities */
-  opportunityCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 17,
-    padding: 15,
-    flexDirection: 'row',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#D9E1EA',
-  },
-
-  opportunityIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: '#0B1F3A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 13,
-  },
-
-  opportunityInfo: {
+  intelligenceStat: {
+    alignItems: "center",
     flex: 1,
   },
 
-  opportunityTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0B1F3A',
-    marginBottom: 4,
+  intelligenceValue: {
+    marginTop: 5,
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "900",
   },
 
-  company: {
+  intelligenceLabel: {
+    marginTop: 2,
+    color: "#B9CAEE",
+    fontSize: 9,
+    fontWeight: "800",
+  },
+
+  statDivider: {
+    width: 1,
+    height: 34,
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
+
+  heroCTA: {
+    marginTop: 20,
+    minHeight: 57,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 17,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  heroCTAText: {
+    color: "#173FBD",
     fontSize: 13,
-    color: '#475569',
-    marginBottom: 4,
+    fontWeight: "900",
+    letterSpacing: 1,
   },
 
-  location: {
-    fontSize: 12,
-    color: '#64748B',
+  heroCTAIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "#EDF2FF",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  /* Career Progress */
-  progressCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 17,
-    padding: 18,
+  emptyAISection: {
+    marginTop: 30,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  emptyAIIcon: {
+    width: 76,
+    height: 76,
+    borderRadius: 25,
+    backgroundColor: "rgba(255,255,255,0.13)",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: '#D9E1EA',
-    marginBottom: 25,
+    borderColor: "rgba(255,255,255,0.18)",
   },
 
-  progressRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
+  emptyAIText: {
+    flex: 1,
+    paddingLeft: 16,
   },
 
-  progressLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0B1F3A',
+  emptyAITitle: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: "900",
   },
 
-  progressValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
+  emptyAISubtitle: {
+    marginTop: 5,
+    color: "#C8D8FF",
+    fontSize: 13,
+    lineHeight: 19,
   },
 
-  progressBackground: {
-    height: 9,
-    backgroundColor: '#E2E8F0',
+  /* ---------------------------------------------------------------------- */
+  /* SECTIONS                                                               */
+  /* ---------------------------------------------------------------------- */
+
+  contentSection: {
+    width: "100%",
+  },
+
+  sectionHeading: {
+    marginBottom: 17,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+  },
+
+  sectionHeadingText: {
+    flex: 1,
+    paddingRight: 10,
+  },
+
+  sectionEyebrow: {
+    color: "#8A42D8",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.8,
+    marginBottom: 5,
+  },
+
+  sectionTitle: {
+    color: "#172033",
+    fontSize: 24,
+    lineHeight: 29,
+    fontWeight: "900",
+  },
+
+  sectionSubtitle: {
+    color: "#718096",
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 3,
+  },
+
+  sectionAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingBottom: 3,
+  },
+
+  sectionActionText: {
+    color: "#2457E6",
+    fontSize: 13,
+    fontWeight: "800",
+    marginRight: 4,
+  },
+
+  /* ---------------------------------------------------------------------- */
+  /* CAREER GRID                                                            */
+  /* ---------------------------------------------------------------------- */
+
+  careerGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginBottom: 38,
+  },
+
+  careerAction: {
+    width: "48%",
+    minHeight: 172,
+    borderRadius: 25,
+    backgroundColor: "#FFFFFF",
+    padding: 18,
+    marginBottom: 13,
+    borderWidth: 1,
+    borderColor: "#E8ECF4",
+    shadowColor: "#172033",
+    shadowOpacity: 0.055,
+    shadowRadius: 15,
+    shadowOffset: {
+      width: 0,
+      height: 7,
+    },
+    elevation: 3,
+  },
+
+  careerActionIcon: {
+    width: 55,
+    height: 55,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 17,
+  },
+
+  careerActionTitle: {
+    color: "#172033",
+    fontSize: 17,
+    lineHeight: 21,
+    fontWeight: "900",
+  },
+
+  careerActionSubtitle: {
+    color: "#718096",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 5,
+  },
+
+  careerArrow: {
+    position: "absolute",
+    right: 15,
+    bottom: 15,
+    width: 30,
+    height: 30,
     borderRadius: 10,
-    overflow: 'hidden',
+    backgroundColor: "#F5F7FA",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  /* ---------------------------------------------------------------------- */
+  /* OPPORTUNITIES                                                          */
+  /* ---------------------------------------------------------------------- */
+
+  opportunityList: {
+    marginBottom: 38,
+  },
+
+  opportunityCard: {
+    minHeight: 105,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 23,
+    padding: 15,
+    marginBottom: 11,
+    borderWidth: 1,
+    borderColor: "#E8ECF4",
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#172033",
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    elevation: 2,
+  },
+
+  opportunityIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 17,
+    backgroundColor: "#EDF2FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  opportunityContent: {
+    flex: 1,
+    paddingHorizontal: 13,
+  },
+
+  opportunityTitle: {
+    color: "#172033",
+    fontSize: 16,
+    fontWeight: "900",
+  },
+
+  opportunityCompany: {
+    color: "#718096",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 3,
+  },
+
+  matchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 9,
+  },
+
+  matchTrack: {
+    flex: 1,
+    height: 6,
+    borderRadius: 5,
+    backgroundColor: "#E7EBF2",
+    overflow: "hidden",
+  },
+
+  matchFill: {
+    height: "100%",
+    backgroundColor: "#2457E6",
+    borderRadius: 5,
+  },
+
+  matchText: {
+    marginLeft: 9,
+    color: "#2457E6",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+
+  /* ---------------------------------------------------------------------- */
+  /* PROGRESS                                                               */
+  /* ---------------------------------------------------------------------- */
+
+  progressCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 27,
+    padding: 21,
+    borderWidth: 1,
+    borderColor: "#E8ECF4",
+    marginBottom: 17,
+    shadowColor: "#172033",
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    shadowOffset: {
+      width: 0,
+      height: 7,
+    },
+    elevation: 3,
+  },
+
+  progressTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  progressTitle: {
+    color: "#172033",
+    fontSize: 17,
+    fontWeight: "900",
+  },
+
+  progressSubtitle: {
+    color: "#718096",
+    fontSize: 12,
+    marginTop: 4,
+  },
+
+  progressPercentage: {
+    color: "#2457E6",
+    fontSize: 25,
+    fontWeight: "900",
+  },
+
+  progressTrack: {
+    marginTop: 19,
+    height: 11,
+    borderRadius: 10,
+    backgroundColor: "#E9EDF4",
+    overflow: "hidden",
   },
 
   progressFill: {
-    height: '100%',
+    height: "100%",
     borderRadius: 10,
+    backgroundColor: "#2457E6",
   },
 
-  progressHint: {
-    color: '#64748B',
+  progressBottom: {
+    marginTop: 15,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  progressStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  progressStatusText: {
+    color: "#536174",
     fontSize: 12,
-    marginTop: 10,
+    fontWeight: "700",
+    marginLeft: 7,
+  },
+
+  progressAction: {
+    color: "#2457E6",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+
+  /* ---------------------------------------------------------------------- */
+  /* CREDITS                                                                */
+  /* ---------------------------------------------------------------------- */
+
+  creditsCard: {
+    minHeight: 95,
+    backgroundColor: "#172033",
+    borderRadius: 26,
+    padding: 17,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    overflow: "hidden",
+  },
+
+  creditsIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: "#8A42D8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  creditsText: {
+    flex: 1,
+    paddingHorizontal: 14,
+  },
+
+  creditsEyebrow: {
+    color: "#AAB7CE",
+    fontSize: 9,
+    letterSpacing: 1.5,
+    fontWeight: "900",
+  },
+
+  creditsTitle: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
+    marginTop: 5,
+  },
+
+  creditsValue: {
+    color: "#FFAA52",
+    fontSize: 27,
+    fontWeight: "900",
+  },
+
+  /* ---------------------------------------------------------------------- */
+  /* FINAL CTA                                                              */
+  /* ---------------------------------------------------------------------- */
+
+  finalAICTA: {
+    minHeight: 92,
+    borderRadius: 26,
+    padding: 16,
+    backgroundColor: "#D83B9C",
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#D83B9C",
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    elevation: 4,
+  },
+
+  finalAIIcon: {
+    width: 55,
+    height: 55,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  finalAIText: {
+    flex: 1,
+    paddingHorizontal: 13,
+  },
+
+  finalAITitle: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "900",
+  },
+
+  finalAISubtitle: {
+    color: "#FFE5F5",
+    fontSize: 12,
     lineHeight: 17,
+    marginTop: 3,
   },
 
-  /* Logout */
-  logoutButton: {
+  bottomSpacer: {
+    height: 115,
+  },
+
+  /* ---------------------------------------------------------------------- */
+  /* BOTTOM NAV                                                             */
+  /* ---------------------------------------------------------------------- */
+
+  bottomNavShadow: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 10,
+    shadowColor: "#172033",
+    shadowOpacity: 0.16,
+    shadowRadius: 20,
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    elevation: 12,
+  },
+
+  bottomNav: {
+    minHeight: 78,
+    borderRadius: 27,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 13,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    borderColor: "#E6EAF2",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    paddingHorizontal: 5,
   },
 
-  logoutText: {
-    color: '#0B1F3A',
-    fontWeight: '700',
-    fontSize: 15,
+  bottomNavItem: {
+    width: 58,
+    height: 68,
+    alignItems: "center",
+    justifyContent: "center",
   },
+
+  bottomNavLabel: {
+    marginTop: 4,
+    color: "#7B879B",
+    fontSize: 9,
+    fontWeight: "800",
+  },
+
+  bottomNavLabelActive: {
+    color: "#2457E6",
+  },
+
+  aiNavButton: {
+    width: 72,
+    height: 78,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -22,
+  },
+
+  aiNavInner: {
+    width: 59,
+    height: 59,
+    borderRadius: 21,
+    backgroundColor: "#2457E6",
+    borderWidth: 4,
+    borderColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#2457E6",
+    shadowOpacity: 0.3,
+    shadowRadius: 13,
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    elevation: 8,
+  },
+
+  aiNavLabel: {
+    color: "#2457E6",
+    fontSize: 9,
+    fontWeight: "900",
+    marginTop: 4,
+  },
+
+  logoutButton: {
+  height: 56,
+  borderRadius: 18,
+  backgroundColor: "#FFFFFF",
+  borderWidth: 1,
+  borderColor: "#F1D5D5",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  marginTop: 20,
+  marginBottom: 10,
+},
+
+logoutButtonText: {
+  marginLeft: 9,
+  color: "#EF4444",
+  fontSize: 14,
+  fontWeight: "900",
+},
 });

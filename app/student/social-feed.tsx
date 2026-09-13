@@ -3,6 +3,7 @@ import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
   FlatList,
+  Image,
   Pressable,
   Share,
   StyleSheet,
@@ -10,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 type Post = {
   id: string;
@@ -18,6 +20,7 @@ type Post = {
   initials: string;
   time: string;
   content: string;
+  imageUri?: string;
   likes: number;
   comments: number;
   liked: boolean;
@@ -42,7 +45,7 @@ const defaultPosts: Post[] = [
     initials: 'SW',
     time: '2h ago',
     content:
-      'Just completed my first year as a Data Analyst! Keep learning, building projects and applying for opportunities. Your first opportunity can be closer than you think. 🚀',
+      'Just completed my first year as a Data Analyst! Keep learning, building projects and applying for opportunities. Your first opportunity can be closer than you think.',
     likes: 24,
     comments: 6,
     liked: false,
@@ -66,7 +69,7 @@ const defaultPosts: Post[] = [
     initials: 'JS',
     time: 'Yesterday',
     content:
-      'A reminder for students: your projects matter. Even small projects can demonstrate your problem-solving skills to potential employers. 💻',
+      'A reminder for students: your projects matter. Even small projects can demonstrate your problem-solving skills to potential employers.',
     likes: 31,
     comments: 8,
     liked: false,
@@ -80,9 +83,6 @@ export default function SocialFeedScreen() {
   const [search, setSearch] =
     useState('');
 
-  /*
-   * Load posts and their saved comments.
-   */
   const loadPosts = useCallback(async () => {
     try {
       const savedPosts =
@@ -111,19 +111,6 @@ export default function SocialFeedScreen() {
         );
       }
 
-      /*
-       * Load comments separately.
-       *
-       * The comments screen stores comments like:
-       *
-       * {
-       *   "1": [comment, comment],
-       *   "2": [comment],
-       * }
-       *
-       * We use the number of saved comments to
-       * update the count shown on the post.
-       */
       const savedComments =
         await AsyncStorage.getItem(
           COMMENTS_KEY
@@ -151,17 +138,6 @@ export default function SocialFeedScreen() {
         }
       }
 
-      /*
-       * Update each post's displayed comment
-       * count using the comments actually saved
-       * for that post.
-       *
-       * The default count represents the existing
-       * comments on the demo post.
-       *
-       * Any comments added by the user are added
-       * on top of that number.
-       */
       const updatedPosts =
         storedPosts.map((post) => {
           const savedForPost =
@@ -197,22 +173,12 @@ export default function SocialFeedScreen() {
     }
   }, []);
 
-  /*
-   * Reload whenever the user returns to
-   * the Social Feed.
-   *
-   * This means adding a comment and pressing
-   * Back will immediately update the count.
-   */
   useFocusEffect(
     useCallback(() => {
       loadPosts();
     }, [loadPosts])
   );
 
-  /*
-   * Like / Unlike a post
-   */
   const toggleLike = async (
     postId: string
   ) => {
@@ -223,7 +189,7 @@ export default function SocialFeedScreen() {
             ...post,
             liked: !post.liked,
             likes: post.liked
-              ? post.likes - 1
+              ? Math.max(0, post.likes - 1)
               : post.likes + 1,
           };
         }
@@ -246,36 +212,31 @@ export default function SocialFeedScreen() {
     }
   };
 
- /*
- * Share a post
- */
-const sharePost = async (
-  post: Post
-) => {
-  const postUrl =
-  `careerforgeai://post/${post.id}`;
+  const sharePost = async (
+    post: Post
+  ) => {
+    const messageParts = [
+      'Check out this post on CareerForgeAI!',
+      '',
+      post.name,
+      '',
+      post.content ||
+        'Check out this shared image.',
+    ];
 
-  const message =
-    `Check out my post on CareerForgeAI! 🚀\n\n` +
-    `${post.name}\n\n` +
-    `${post.content}\n\n` +
-    `View the post:\n${postUrl}`;
+    try {
+      await Share.share({
+        title: 'Share CareerForgeAI Post',
+        message: messageParts.join('\n'),
+      });
+    } catch (error) {
+      console.log(
+        'Share error:',
+        error
+      );
+    }
+  };
 
-  try {
-    await Share.share({
-      title: 'Share CareerForgeAI Post',
-      message,
-    });
-  } catch (error) {
-    console.log(
-      'Share error:',
-      error
-    );
-  }
-};
-  /*
-   * Filter posts
-   */
   const filteredPosts =
     posts.filter((post) =>
       `${post.name} ${post.role} ${post.content}`
@@ -285,9 +246,6 @@ const sharePost = async (
         )
     );
 
-  /*
-   * Render individual post
-   */
   const renderPost = ({
     item,
   }: {
@@ -295,56 +253,53 @@ const sharePost = async (
   }) => {
     return (
       <View style={styles.postCard}>
-        {/* Post Header */}
+        {/* Header */}
         <View style={styles.postHeader}>
           <View style={styles.avatar}>
-            <Text
-              style={styles.avatarText}
-            >
+            <Text style={styles.avatarText}>
               {item.initials}
             </Text>
           </View>
 
           <View style={styles.authorInfo}>
-            <Text
-              style={styles.authorName}
-            >
+            <Text style={styles.authorName}>
               {item.name}
             </Text>
 
-            <Text
-              style={styles.authorRole}
-            >
+            <Text style={styles.authorRole}>
               {item.role}
             </Text>
 
-            <Text
-              style={styles.postTime}
-            >
+            <Text style={styles.postTime}>
               {item.time}
             </Text>
           </View>
         </View>
 
-        {/* Post Content */}
-        <Text style={styles.postContent}>
-          {item.content}
-        </Text>
+        {/* Text */}
+        {item.content ? (
+          <Text style={styles.postContent}>
+            {item.content}
+          </Text>
+        ) : null}
+
+        {/* Image */}
+        {item.imageUri ? (
+          <Image
+            source={{ uri: item.imageUri }}
+            style={styles.postImage}
+            resizeMode="cover"
+          />
+        ) : null}
 
         {/* Engagement */}
-        <View
-          style={styles.engagementRow}
-        >
-          <Text
-            style={styles.engagementText}
-          >
-            ❤️ {item.likes} likes
+        <View style={styles.engagementRow}>
+          <Text style={styles.engagementText}>
+            {item.likes} likes
           </Text>
 
-          <Text
-            style={styles.engagementText}
-          >
-            💬 {item.comments}{' '}
+          <Text style={styles.engagementText}>
+            {item.comments}{' '}
             {item.comments === 1
               ? 'comment'
               : 'comments'}
@@ -353,13 +308,26 @@ const sharePost = async (
 
         {/* Actions */}
         <View style={styles.actionsRow}>
-          {/* Like */}
           <Pressable
             style={styles.actionButton}
             onPress={() =>
               toggleLike(item.id)
             }
           >
+            <Ionicons
+              name={
+                item.liked
+                  ? 'heart'
+                  : 'heart-outline'
+              }
+              size={18}
+              color={
+                item.liked
+                  ? '#2563EB'
+                  : '#475569'
+              }
+            />
+
             <Text
               style={[
                 styles.actionText,
@@ -368,12 +336,11 @@ const sharePost = async (
               ]}
             >
               {item.liked
-                ? '❤️ Liked'
-                : '♡ Like'}
+                ? 'Liked'
+                : 'Like'}
             </Text>
           </Pressable>
 
-          {/* Comment */}
           <Pressable
             style={styles.actionButton}
             onPress={() =>
@@ -389,24 +356,31 @@ const sharePost = async (
               })
             }
           >
-            <Text
-              style={styles.actionText}
-            >
-              💬 Comment
+            <Ionicons
+              name="chatbubble-outline"
+              size={17}
+              color="#475569"
+            />
+
+            <Text style={styles.actionText}>
+              Comment
             </Text>
           </Pressable>
 
-          {/* Share */}
           <Pressable
             style={styles.actionButton}
             onPress={() =>
               sharePost(item)
             }
           >
-            <Text
-              style={styles.actionText}
-            >
-              ↗ Share
+            <Ionicons
+              name="share-outline"
+              size={18}
+              color="#475569"
+            />
+
+            <Text style={styles.actionText}>
+              Share
             </Text>
           </Pressable>
         </View>
@@ -430,51 +404,48 @@ const sharePost = async (
             }
           }}
         >
-          <Text style={styles.backIcon}>
-            ←
-          </Text>
+          <Ionicons
+            name="arrow-back"
+            size={23}
+            color="#FFFFFF"
+          />
         </Pressable>
 
         <View
           style={styles.headerTextContainer}
         >
-          <Text
-            style={styles.headerTitle}
-          >
+          <Text style={styles.headerTitle}>
             Social Feed
           </Text>
 
-          <Text
-            style={styles.headerSubtitle}
-          >
+          <Text style={styles.headerSubtitle}>
             Connect, learn and grow together
           </Text>
         </View>
 
-        {/* Create Post */}
         <Pressable
           style={styles.createButton}
-          onPress={() => {
+          onPress={() =>
             router.push(
               '/student/create-post'
-            );
-          }}
+            )
+          }
         >
-          <Text
-            style={styles.createButtonText}
-          >
-            +
-          </Text>
+          <Ionicons
+            name="add"
+            size={27}
+            color="#0B1F3A"
+          />
         </Pressable>
       </View>
 
       {/* Search */}
-      <View
-        style={styles.searchContainer}
-      >
-        <Text style={styles.searchIcon}>
-          🔍
-        </Text>
+      <View style={styles.searchContainer}>
+        <Ionicons
+          name="search-outline"
+          size={19}
+          color="#64748B"
+        />
 
         <TextInput
           style={styles.searchInput}
@@ -482,6 +453,7 @@ const sharePost = async (
           placeholderTextColor="#94A3B8"
           value={search}
           onChangeText={setSearch}
+          returnKeyType="search"
         />
       </View>
 
@@ -492,38 +464,29 @@ const sharePost = async (
           item.id
         }
         renderItem={renderPost}
-        showsVerticalScrollIndicator={
-          false
-        }
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={
           styles.feed
         }
         ListHeaderComponent={
-          <Text
-            style={styles.sectionTitle}
-          >
+          <Text style={styles.sectionTitle}>
             Latest Posts
           </Text>
         }
         ListEmptyComponent={
-          <View
-            style={styles.emptyState}
-          >
-            <Text
-              style={styles.emptyIcon}
-            >
-              📰
-            </Text>
+          <View style={styles.emptyState}>
+            <Ionicons
+              name="newspaper-outline"
+              size={48}
+              color="#94A3B8"
+            />
 
-            <Text
-              style={styles.emptyTitle}
-            >
+            <Text style={styles.emptyTitle}>
               No posts found
             </Text>
 
-            <Text
-              style={styles.emptyText}
-            >
+            <Text style={styles.emptyText}>
               Try searching for something else.
             </Text>
           </View>
@@ -556,11 +519,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
 
-  backIcon: {
-    color: '#FFFFFF',
-    fontSize: 30,
-  },
-
   headerTextContainer: {
     flex: 1,
   },
@@ -586,13 +544,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  createButtonText: {
-    color: '#0B1F3A',
-    fontSize: 28,
-    fontWeight: '500',
-    lineHeight: 30,
-  },
-
   searchContainer: {
     margin: 16,
     height: 48,
@@ -605,15 +556,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
 
-  searchIcon: {
-    fontSize: 17,
-    marginRight: 8,
-  },
-
   searchInput: {
     flex: 1,
     color: '#0F172A',
     fontSize: 14,
+    marginLeft: 8,
   },
 
   feed: {
@@ -688,6 +635,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
+  postImage: {
+    width: '100%',
+    height: 240,
+    borderRadius: 12,
+    marginBottom: 14,
+    backgroundColor: '#E2E8F0',
+  },
+
   engagementRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -708,8 +663,11 @@ const styles = StyleSheet.create({
   },
 
   actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 5,
     paddingHorizontal: 4,
+    gap: 6,
   },
 
   actionText: {
@@ -719,7 +677,7 @@ const styles = StyleSheet.create({
   },
 
   likedText: {
-    color: '#0B1F3A',
+    color: '#2563EB',
   },
 
   emptyState: {
@@ -727,15 +685,11 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
 
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-
   emptyTitle: {
     color: '#0B1F3A',
     fontSize: 18,
     fontWeight: '800',
+    marginTop: 12,
   },
 
   emptyText: {

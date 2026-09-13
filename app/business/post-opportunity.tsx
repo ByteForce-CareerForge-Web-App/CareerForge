@@ -7,6 +7,8 @@ import {
   TextInput,
   Pressable,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,6 +24,7 @@ export default function PostOpportunityScreen() {
   const [location, setLocation] = useState('');
   const [workArrangement, setWorkArrangement] =
     useState('');
+  const [salary, setSalary] = useState('');
   const [deadline, setDeadline] = useState('');
   const [positions, setPositions] = useState('');
   const [qualification, setQualification] =
@@ -41,7 +44,7 @@ export default function PostOpportunityScreen() {
     ) {
       Alert.alert(
         'Missing Information',
-        'Please complete all fields before posting the opportunity.'
+        'Please complete all required fields before posting the opportunity.'
       );
       return;
     }
@@ -65,6 +68,7 @@ export default function PostOpportunityScreen() {
         skills: skills.trim(),
         location: location.trim(),
         arrangement: workArrangement,
+        salary: salary.trim(),
         deadline: deadline.trim(),
         positions: positions.trim(),
         qualification: qualification.trim(),
@@ -111,238 +115,272 @@ export default function PostOpportunityScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
+    <KeyboardAvoidingView
+      style={styles.keyboardContainer}
+      behavior={
+        Platform.OS === 'ios'
+          ? 'padding'
+          : undefined
+      }
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backText}>‹</Text>
-        </Pressable>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backText}>‹</Text>
+          </Pressable>
 
-        <View>
-          <Text style={styles.headerTitle}>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>
+              Post Opportunity
+            </Text>
+
+            <Text style={styles.headerSubtitle}>
+              Find the right graduate talent for your
+              business.
+            </Text>
+          </View>
+        </View>
+
+        {/* Form */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>
+            Opportunity Details
+          </Text>
+
+          <Text style={styles.label}>
+            Opportunity Title
+          </Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. Graduate Data Analyst"
+            placeholderTextColor="#94A3B8"
+            value={title}
+            onChangeText={setTitle}
+          />
+
+          <Text style={styles.label}>
+            Opportunity Type
+          </Text>
+
+          <View style={styles.optionsRow}>
+            {[
+              'Internship',
+              'Graduate Job',
+              'Learnership',
+            ].map((option) => (
+              <Pressable
+                key={option}
+                style={[
+                  styles.optionButton,
+                  type === option &&
+                    styles.optionSelected,
+                ]}
+                onPress={() => setType(option)}
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    type === option &&
+                      styles.optionTextSelected,
+                  ]}
+                >
+                  {option}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={styles.label}>
+            Description
+          </Text>
+
+          <TextInput
+            style={[
+              styles.input,
+              styles.textArea,
+            ]}
+            placeholder="Describe the opportunity, responsibilities and expectations..."
+            placeholderTextColor="#94A3B8"
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            textAlignVertical="top"
+          />
+
+          <Text style={styles.label}>
+            Required Skills
+          </Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. Python, SQL, Excel, Data Analysis"
+            placeholderTextColor="#94A3B8"
+            value={skills}
+            onChangeText={setSkills}
+          />
+        </View>
+
+        {/* Job Information */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>
+            Job Information
+          </Text>
+
+          <Text style={styles.label}>
+            Location
+          </Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. Durban, KwaZulu-Natal"
+            placeholderTextColor="#94A3B8"
+            value={location}
+            onChangeText={setLocation}
+          />
+
+          <Text style={styles.label}>
+            Work Arrangement
+          </Text>
+
+          <View style={styles.optionsRow}>
+            {[
+              'On-site',
+              'Hybrid',
+              'Remote',
+            ].map((option) => (
+              <Pressable
+                key={option}
+                style={[
+                  styles.optionButton,
+                  workArrangement === option &&
+                    styles.optionSelected,
+                ]}
+                onPress={() =>
+                  setWorkArrangement(option)
+                }
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    workArrangement === option &&
+                      styles.optionTextSelected,
+                  ]}
+                >
+                  {option}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Salary */}
+          <Text style={styles.label}>
+            Salary
+            <Text style={styles.optionalText}>
+              {' '}
+              (Optional)
+            </Text>
+          </Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. R8,000 - R12,000 per month"
+            placeholderTextColor="#94A3B8"
+            value={salary}
+            onChangeText={setSalary}
+          />
+
+          <Text style={styles.helperText}>
+            Leave blank if the salary is not specified.
+          </Text>
+
+          <Text style={styles.label}>
+            Application Deadline
+          </Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. 30 September 2026"
+            placeholderTextColor="#94A3B8"
+            value={deadline}
+            onChangeText={setDeadline}
+          />
+
+          <Text style={styles.label}>
+            Number of Positions
+          </Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. 5"
+            placeholderTextColor="#94A3B8"
+            value={positions}
+            onChangeText={setPositions}
+            keyboardType="numeric"
+          />
+
+          <Text style={styles.label}>
+            Minimum Qualification
+          </Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. BSc in Computer Science or related field"
+            placeholderTextColor="#94A3B8"
+            value={qualification}
+            onChangeText={setQualification}
+          />
+        </View>
+
+        {/* AI Matching */}
+        <View style={styles.aiCard}>
+          <Text style={styles.aiTitle}>
+            AI Candidate Matching
+          </Text>
+
+          <Text style={styles.aiText}>
+            CareerForgeAI will help identify students
+            whose skills, qualifications and career
+            goals match this opportunity.
+          </Text>
+        </View>
+
+        {/* Buttons */}
+        <Pressable
+          style={styles.postButton}
+          onPress={handlePostOpportunity}
+        >
+          <Text style={styles.postButtonText}>
             Post Opportunity
           </Text>
+        </Pressable>
 
-          <Text style={styles.headerSubtitle}>
-            Find the right graduate talent for your
-            business.
+        <Pressable
+          style={styles.cancelButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.cancelButtonText}>
+            Cancel
           </Text>
-        </View>
-      </View>
-
-      {/* Form */}
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>
-          Opportunity Details
-        </Text>
-
-        <Text style={styles.label}>
-          Opportunity Title
-        </Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. Graduate Data Analyst"
-          placeholderTextColor="#94A3B8"
-          value={title}
-          onChangeText={setTitle}
-        />
-
-        <Text style={styles.label}>
-          Opportunity Type
-        </Text>
-
-        <View style={styles.optionsRow}>
-          {[
-            'Internship',
-            'Graduate Job',
-            'Learnership',
-          ].map((option) => (
-            <Pressable
-              key={option}
-              style={[
-                styles.optionButton,
-                type === option &&
-                  styles.optionSelected,
-              ]}
-              onPress={() => setType(option)}
-            >
-              <Text
-                style={[
-                  styles.optionText,
-                  type === option &&
-                    styles.optionTextSelected,
-                ]}
-              >
-                {option}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <Text style={styles.label}>
-          Description
-        </Text>
-
-        <TextInput
-          style={[
-            styles.input,
-            styles.textArea,
-          ]}
-          placeholder="Describe the opportunity, responsibilities and expectations..."
-          placeholderTextColor="#94A3B8"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          textAlignVertical="top"
-        />
-
-        <Text style={styles.label}>
-          Required Skills
-        </Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. Python, SQL, Excel, Data Analysis"
-          placeholderTextColor="#94A3B8"
-          value={skills}
-          onChangeText={setSkills}
-        />
-      </View>
-
-      {/* Job Information */}
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>
-          Job Information
-        </Text>
-
-        <Text style={styles.label}>
-          Location
-        </Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. Durban, KwaZulu-Natal"
-          placeholderTextColor="#94A3B8"
-          value={location}
-          onChangeText={setLocation}
-        />
-
-        <Text style={styles.label}>
-          Work Arrangement
-        </Text>
-
-        <View style={styles.optionsRow}>
-          {[
-            'On-site',
-            'Hybrid',
-            'Remote',
-          ].map((option) => (
-            <Pressable
-              key={option}
-              style={[
-                styles.optionButton,
-                workArrangement === option &&
-                  styles.optionSelected,
-              ]}
-              onPress={() =>
-                setWorkArrangement(option)
-              }
-            >
-              <Text
-                style={[
-                  styles.optionText,
-                  workArrangement === option &&
-                    styles.optionTextSelected,
-                ]}
-              >
-                {option}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <Text style={styles.label}>
-          Application Deadline
-        </Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. 30 September 2026"
-          placeholderTextColor="#94A3B8"
-          value={deadline}
-          onChangeText={setDeadline}
-        />
-
-        <Text style={styles.label}>
-          Number of Positions
-        </Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. 5"
-          placeholderTextColor="#94A3B8"
-          value={positions}
-          onChangeText={setPositions}
-          keyboardType="numeric"
-        />
-
-        <Text style={styles.label}>
-          Minimum Qualification
-        </Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. BSc in Computer Science or related field"
-          placeholderTextColor="#94A3B8"
-          value={qualification}
-          onChangeText={setQualification}
-        />
-      </View>
-
-      {/* AI Matching */}
-      <View style={styles.aiCard}>
-        <Text style={styles.aiTitle}>
-          ✨ AI Candidate Matching
-        </Text>
-
-        <Text style={styles.aiText}>
-          CareerForgeAI will help identify students
-          whose skills, qualifications and career
-          goals match this opportunity.
-        </Text>
-      </View>
-
-      {/* Buttons */}
-      <Pressable
-        style={styles.postButton}
-        onPress={handlePostOpportunity}
-      >
-        <Text style={styles.postButtonText}>
-          Post Opportunity
-        </Text>
-      </Pressable>
-
-      <Pressable
-        style={styles.cancelButton}
-        onPress={() => router.back()}
-      >
-        <Text style={styles.cancelButtonText}>
-          Cancel
-        </Text>
-      </Pressable>
-    </ScrollView>
+        </Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardContainer: {
+    flex: 1,
+  },
+
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
@@ -377,6 +415,10 @@ const styles = StyleSheet.create({
     lineHeight: 32,
   },
 
+  headerTextContainer: {
+    flex: 1,
+  },
+
   headerTitle: {
     color: '#FFFFFF',
     fontSize: 22,
@@ -384,7 +426,7 @@ const styles = StyleSheet.create({
   },
 
   headerSubtitle: {
-    color: '#A5B4FC',
+    color: '#CBD5E1',
     fontSize: 12,
     marginTop: 4,
   },
@@ -410,6 +452,17 @@ const styles = StyleSheet.create({
     color: '#334155',
     marginBottom: 7,
     marginTop: 12,
+  },
+
+  optionalText: {
+    color: '#64748B',
+    fontWeight: '500',
+  },
+
+  helperText: {
+    color: '#64748B',
+    fontSize: 11,
+    marginTop: 5,
   },
 
   input: {
@@ -444,8 +497,8 @@ const styles = StyleSheet.create({
   },
 
   optionSelected: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#4F46E5',
+    backgroundColor: '#E8F0F8',
+    borderColor: '#0B1F3A',
   },
 
   optionText: {
@@ -455,11 +508,11 @@ const styles = StyleSheet.create({
   },
 
   optionTextSelected: {
-    color: '#4F46E5',
+    color: '#0B1F3A',
   },
 
   aiCard: {
-    backgroundColor: '#4338CA',
+    backgroundColor: '#0B1F3A',
     marginHorizontal: 20,
     marginTop: 18,
     borderRadius: 18,
@@ -474,13 +527,13 @@ const styles = StyleSheet.create({
   },
 
   aiText: {
-    color: '#C7D2FE',
+    color: '#CBD5E1',
     fontSize: 13,
     lineHeight: 19,
   },
 
   postButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#0B1F3A',
     marginHorizontal: 20,
     marginTop: 22,
     borderRadius: 14,
