@@ -213,9 +213,5 @@ It provided practical experience in mobile application development, API integrat
 
 Aspiring Data Analyst | Software Development | AI & Digital Innovation
 
-- GitHub: [Add your GitHub profile]
-- LinkedIn: [Add your LinkedIn profile]
-
----
 
 ⭐ If you find this project interesting, feel free to explore the repository!
